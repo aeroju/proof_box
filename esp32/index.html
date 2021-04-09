@@ -1,0 +1,212 @@
+<!--
+    THIS EXAMPLE WAS DOWNLOADED FROM https://echarts.apache.org/examples/zh/editor.html?c=dynamic-data2
+-->
+<!DOCTYPE html>
+<html style="height: 100%">
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body style="height: 100%; margin: 0">
+        <div id="status_div" style="width:80%;height:100" align="center">
+            <table>
+                <tr>
+                    <td>
+                        <table>
+                            <tr>
+                                <td>温度:</td><td><span id="curr_temp"></span></td>
+                                <td>范围：</td><td><span id="setting_temp"></span></td>
+                            </tr>
+                            <tr>
+                                <td>湿度:</td><td><span id="curr_humi"></span><button type="button">设置</button></td>
+                                <td>范围：</td><td><span id="setting_humi"></span><button type="button">设置</button> </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td><b>当前状态:</b></td>
+                </tr>
+                <tr>
+                    <td>
+                        <table>
+                            <tr>
+                                <td>加热：<span id="is_heating"></span></td>
+                                <td>加湿：<span id="is_humi"></span></td>
+                                <td>排风：<span id="is_fan"></span></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+            </table>
+
+
+        </div>
+        <div id="container" style="width:80%;height:80%" align="center"></div>
+
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+        <script src="/js/jquery-3.0.0.min.js"></script>
+
+        <script type="text/javascript">
+var dom = document.getElementById("container");
+var myChart = echarts.init(dom);
+var app = {};
+
+var option;
+
+
+
+function randomData(seed) {
+    now = new Date(+now + oneDay);
+    seed = seed + Math.random() * 21 - 10;
+    return {
+        name: now.toString(),
+        value: [
+            [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/'),
+            Math.round(seed)
+        ]
+    };
+}
+
+
+
+var temp = [];
+var humi = [];
+var now = +new Date(1997, 9, 3);
+var oneDay = 24 * 3600 * 1000;
+var seed_temp = Math.random() * 1000;
+var seed_humi = Math.random() * 1100;
+for (var i = 0; i < 1000; i++) {
+    temp.push(randomData(seed_temp));
+    humi.push(randomData(seed_humi));
+}
+
+var server = window.location.host;
+function init_page(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_his",
+        dataType: "json",
+        success: function (result) {
+            for(var i=0;i<result.times.length;i++){
+                temp.push({name:result.times[i],
+                    value:[result.times[i],result.temps[i]]})
+                humi.push({name:result.times[i],
+                    value:[result.times[i],result.humis[i]]})
+
+            }
+            myChart.setOption({
+                series: [{data: temp},{data:humi}]
+            })
+        }
+    });
+}
+function get_status(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_status",
+        dataType: "json",
+        success: function (result) {
+            $("#curr_temp").innerHTML=result.status.temp;
+            $("#curr_humi").innerHTML=result.status.humi;
+            $("#setting_temp").innerHTML=result.status.temp_setting;
+            $("#setting_humi").innerHTML=result.status.humi_setting;
+            temp.shift()
+            temp.push({name:result.status.curr_time,value:[result.status.curr_time,result.status.curr_temp]})
+            humi.shift()
+            humi.push({name:result.status.curr_time,value:[result.status.curr_time,result.status.curr_humi]})
+
+            myChart.setOption({
+                series: [{data: temp},{data:humi}]
+            })
+        }
+    });
+}
+
+
+
+option = {
+    title: {
+        text: '发酵箱温湿度曲线'
+    },
+    tooltip: {
+        trigger: 'axis',
+<!--        formatter: function (params) {-->
+<!--            params = params[0];-->
+<!--            var date = new Date(params.name);-->
+<!--            return date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ' : ' + params.value[1];-->
+<!--        },-->
+        axisPointer: {
+            animation: false
+        }
+    },
+    xAxis: {
+        type: 'time',
+        splitLine: {
+            show: false
+        }
+    },
+    yAxis: {
+        type: 'value',
+        boundaryGap: [0, '100%'],
+        splitLine: {
+            show: true
+        }
+    },
+    series: [{
+        name: '温度',
+        type: 'line',
+        label:{
+            show:true,
+            position:'top',
+            formatter:'{a}:{c}',
+            },
+        lineStyle:{
+            color:'blue'
+            },
+        showSymbol: false,
+        hoverAnimation: false,
+        data: temp
+    },{
+        name: '湿度',
+        type: 'line',
+                label:{
+            show:true,
+            position:'top',
+            formatter:'{a}:{c}',
+            },
+        lineStyle:{
+            color:'green'
+            },
+        showSymbol: false,
+        hoverAnimation: false,
+        data: humi
+    }
+    ]
+};
+
+setInterval(function () {
+
+    for (var i = 0; i < 5; i++) {
+        temp.shift();
+        temp.push(randomData(seed_temp));
+        humi.shift();
+        humi.push(randomData(seed_humi));
+    }
+
+    myChart.setOption({
+        series: [{
+            data: temp
+        },
+        {data:humi}]
+    });
+}, 1000);
+
+if (option && typeof option === 'object') {
+    myChart.setOption(option);
+}
+
+        </script>
+    </body>
+</html>
+    
