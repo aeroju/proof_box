@@ -4,27 +4,42 @@
 <!DOCTYPE html>
 <html style="height: 100%">
     <head>
+        <title>DIY 发酵箱</title>
         <meta charset="utf-8">
     </head>
     <body style="height: 100%; margin: 0">
         <div id="status_div" style="width:80%;height:100" align="center">
             <table>
+                <tr><td>状态：</td><td><span id="curr_status">xx</span><input ID="operation" type="button" onclick="on_operation()" value="放入面团"> </td></tr>
                 <tr>
                     <td>
-                        <table>
-                            <tr>
-                                <td>温度:</td><td><span id="curr_temp"></span></td>
-                                <td>范围：</td><td><span id="setting_temp"></span></td>
+                        <table width="100%">
+                            <tr style="border-bottom: 1px solid #dddddd">
+                                <td  style="border-bottom: 1px solid #dddddd">温度:<span id="curr_temp">df</span></td>
+                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">(
+                                    <input type="number" id="min_temp" style="width:30px" onchange="if(value>=30){value=30 }else if(value<=20){ value=20}" value="23">
+                                    -
+                                    <input type="number" id="max_temp" style="width:30px" onchange="if(value>=30){value=30 }else if(value<=20){ value=20}" value="28">
+                                    <input type="button" onclick="on_temp_setup()" value="设置">
+                                    )
+                                </td>
                             </tr>
-                            <tr>
-                                <td>湿度:</td><td><span id="curr_humi"></span><button type="button">设置</button></td>
-                                <td>范围：</td><td><span id="setting_humi"></span><button type="button">设置</button> </td>
+                            <tr style="border-bottom: 1px solid #dddddd">
+                                <td>湿度:<span id="curr_humi"></span></td>
+                                <td style="padding:10px 10px">
+                                (
+                                    <input type="number" id="min_humi" style="width:38px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="75">
+                                    -
+                                    <input type="number" id="max_humi" style="width:38px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="85">
+                                    <input type="button" onclick="on_humi_setup()" value="设置">
+                                    )
+                                </td>
                             </tr>
                         </table>
                     </td>
                 </tr>
                 <tr>
-                    <td><b>当前状态:</b></td>
+                    <td><b>内部状态:</b></td>
                 </tr>
                 <tr>
                     <td>
@@ -45,7 +60,7 @@
         <div id="container" style="width:80%;height:80%" align="center"></div>
 
         <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-        <script src="/js/jquery-3.0.0.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
 
         <script type="text/javascript">
 var dom = document.getElementById("container");
@@ -54,77 +69,10 @@ var app = {};
 
 var option;
 
-
-
-function randomData(seed) {
-    now = new Date(+now + oneDay);
-    seed = seed + Math.random() * 21 - 10;
-    return {
-        name: now.toString(),
-        value: [
-            [now.getFullYear(), now.getMonth() + 1, now.getDate()].join('/'),
-            Math.round(seed)
-        ]
-    };
-}
-
-
-
-var temp = [];
-var humi = [];
+var temp_his = [];
+var humi_his = [];
 var now = +new Date(1997, 9, 3);
 var oneDay = 24 * 3600 * 1000;
-var seed_temp = Math.random() * 1000;
-var seed_humi = Math.random() * 1100;
-for (var i = 0; i < 1000; i++) {
-    temp.push(randomData(seed_temp));
-    humi.push(randomData(seed_humi));
-}
-
-var server = window.location.host;
-function init_page(){
-    $.ajax({
-        type: "GET",
-        url:"http://" + server + "/get_his",
-        dataType: "json",
-        success: function (result) {
-            for(var i=0;i<result.times.length;i++){
-                temp.push({name:result.times[i],
-                    value:[result.times[i],result.temps[i]]})
-                humi.push({name:result.times[i],
-                    value:[result.times[i],result.humis[i]]})
-
-            }
-            myChart.setOption({
-                series: [{data: temp},{data:humi}]
-            })
-        }
-    });
-}
-function get_status(){
-    $.ajax({
-        type: "GET",
-        url:"http://" + server + "/get_status",
-        dataType: "json",
-        success: function (result) {
-            $("#curr_temp").innerHTML=result.status.temp;
-            $("#curr_humi").innerHTML=result.status.humi;
-            $("#setting_temp").innerHTML=result.status.temp_setting;
-            $("#setting_humi").innerHTML=result.status.humi_setting;
-            temp.shift()
-            temp.push({name:result.status.curr_time,value:[result.status.curr_time,result.status.curr_temp]})
-            humi.shift()
-            humi.push({name:result.status.curr_time,value:[result.status.curr_time,result.status.curr_humi]})
-
-            myChart.setOption({
-                series: [{data: temp},{data:humi}]
-            })
-        }
-    });
-}
-
-
-
 option = {
     title: {
         text: '发酵箱温湿度曲线'
@@ -143,12 +91,12 @@ option = {
     xAxis: {
         type: 'time',
         splitLine: {
-            show: false
+            show: true
         }
     },
     yAxis: {
         type: 'value',
-        boundaryGap: [0, '100%'],
+        boundaryGap: ['20%', '20%'],
         splitLine: {
             show: true
         }
@@ -166,11 +114,16 @@ option = {
             },
         showSymbol: false,
         hoverAnimation: false,
-        data: temp
+        data: temp_his,
+        markLine:{
+            data:[{yAxis: 20},
+                   {yAxis: 30}
+            ]
+        }
     },{
         name: '湿度',
         type: 'line',
-                label:{
+        label:{
             show:true,
             position:'top',
             formatter:'{a}:{c}',
@@ -180,30 +133,165 @@ option = {
             },
         showSymbol: false,
         hoverAnimation: false,
-        data: humi
+        data: humi_his,
+        markLine:{
+            data:[{yAxis: 60},{yAxis: 80}]
+        }
     }
     ]
 };
-
-setInterval(function () {
-
-    for (var i = 0; i < 5; i++) {
-        temp.shift();
-        temp.push(randomData(seed_temp));
-        humi.shift();
-        humi.push(randomData(seed_humi));
-    }
-
-    myChart.setOption({
-        series: [{
-            data: temp
-        },
-        {data:humi}]
-    });
-}, 1000);
-
 if (option && typeof option === 'object') {
     myChart.setOption(option);
+}
+
+var server = window.location.host;
+function init_page(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_his",
+        dataType: "text",
+        success: function (data) {
+            var lines = data.split("\n")
+            for(var i=0;i<lines.length;i++){
+                var line=lines[i].split("|");
+                if(line.length==3){
+                    temp_his.push({name:line[0],
+                        value:[line[0],line[1]]})
+                    humi_his.push({name:line[0],
+                        value:[line[0],line[2]]})
+                }
+            }
+            get_settings()
+            get_status()
+        }
+    });
+}
+function get_settings(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_settings",
+        dataType: "json",
+        success: function (result) {
+            $("#min_temp").val(result.settings.min_temp);
+            $("#max_temp").val(result.settings.max_temp);
+            $("#min_humi").val(result.settings.min_humi);
+            $("#max_humi").val(result.settings.max_humi);
+            option.series[0].markLine["data"][0]={yAxis:$("#min_temp").val()}
+            option.series[0].markLine["data"][1]={yAxis:$("#max_temp").val()}
+            option.series[1].markLine["data"][0]={yAxis:$("#min_humi").val()}
+            option.series[1].markLine["data"][1]={yAxis:$("#max_humi").val()}
+            myChart.setOption(option)
+        }
+    });
+}
+
+function on_temp_setup(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/change_settings?min_temp="+$("#min_temp").val() + "&max_temp="+$("#max_temp").val(),
+        dataType: "text",
+        success:function(data){
+            get_settings()
+        }
+    })
+}
+function on_humi_setup(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/change_settings?min_humi="+$("#min_humi").val() + "&max_humi="+$("#max_humi").val(),
+        dataType: "text",
+        success:function(data){
+            get_settings()
+        }
+    })
+}
+function on_operation(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/on_operation?operation=2",
+        dataType: "text",
+        success:function(data){
+            $("#operation").hide()
+            $("#curr_status").text("发酵中")
+        }
+    })
+}
+function from_sec_to_str(s){
+    var h = Math.floor(s/3600);
+    var m = Math.floor((s-h*3600)/60);
+    var sl = s-h*3600-m*60;
+    var ret="";
+    if(h>0){
+        ret=ret+h+"小时" + m + "分钟";
+    }else{
+        if(m>0){
+            ret = ret + m + "分钟";
+        }
+    }
+    ret = ret + sl + "秒";
+    return ret;
+}
+function get_status(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_status",
+        dataType: "json",
+        success: function (result) {
+            $("#curr_temp").html(result.status.temp);
+            $("#curr_humi").html(result.status.humi);
+            $("#min_temp").val(result.status.min_temp);
+            $("#max_temp").val(result.status.max_temp);
+            $("#min_humi").val(result.status.min_humi);
+            $("#max_humi").val(result.status.max_humi);
+            if(result.status.status==0){
+                $("#curr_status").text("预热中");
+            }
+            else if(result.status.status==1){
+                $("#curr_status").text("预热完成，等待面团");
+            }
+            else if(result.status.status==2){
+                $("#curr_status").text("发酵中，已发酵：" + from_sec_to_str(result.status.proof_time));
+                $("#operation").hide()
+            }else{
+                $("#curr_status").text(result.status.status);
+            }
+            if(result.status.is_heating){
+                $("#is_heating").text("On")
+            }else{
+                $("#is_heating").text("Off")
+            }
+            if(result.status.is_humi){
+                $("#is_humi").text("On")
+            }else{
+                $("#is_humi").text("Off")
+            }
+            if(result.status.is_fan){
+                $("#is_fan").text("On")
+            }else{
+                $("#is_fan").text("Off")
+            }
+            var curr_time = result.status.curr_time
+            if(temp_his.length==0 || curr_time!=temp_his[temp_his.length-1].name){
+                temp_his.push({name:curr_time,value:[curr_time,result.status.temp]})
+                humi_his.push({name:curr_time,value:[curr_time,result.status.humi]})
+                myChart.setOption({
+                    series: [
+                    {data: temp_his},
+                    {data: humi_his}
+                    ]
+                });
+            }
+        }
+    });
+}
+
+
+window.onload=function(){
+    init_page()
+    setInterval(function () {
+        get_status()
+        }, 30000
+    );
 }
 
         </script>

@@ -2,6 +2,7 @@ from machine import Pin, I2C, PWM
 import dht
 import _thread
 import ujson
+import uos
 import utime
 from utils import *
 
@@ -9,7 +10,9 @@ class ProofBoxController():
     def __init__(self,fake=False):
         # self.callbacks=[]
         MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.read_settings)
+        MessageCenter.registe_message_callback(MSG_TYPE_MANUAL_OPERATION,self.on_manual_operation)
         self._status=STATUS_PREPARE
+        self._proof_start=utime.time()
         self._status_lock = _thread.allocate_lock()
         self._fake = fake
 
@@ -33,7 +36,7 @@ class ProofBoxController():
     def status(self,s):
         if(self._status_lock.acquire()):
             try:
-                self._status = s
+                self._status = int(s)
                 if(s==STATUS_PROOFING):
                     self._proof_start=utime.time()
             finally:
@@ -50,9 +53,11 @@ class ProofBoxController():
             finally:
                 self._status_lock.release()
 
+    def on_manual_operation(self,s):
+        self.status = s
 
     def notify_message(self,msg):
-        print(ujson.dumps(msg))
+        # print(ujson.dumps(msg))
         MessageCenter.notify(MSG_TYPE_CLIENT_STATUS,msg)
         # for c in self.callbacks:
         #     c(msg)
@@ -96,7 +101,8 @@ class ProofBoxController():
     #     self.max_humi = CONFIG[SETTINGS_MAX_HUMI]
 
     def get_temp_and_humi(self):
-        if(self._fake): return 23,67
+        if(self._fake):
+            return int.from_bytes(uos.urandom(1),'small')/255*10+23,int.from_bytes(uos.urandom(1),'small')/255*15+67
         self.temp_and_humi_sensor.measure()
         return self.temp_and_humi_sensor.temperature(),self.temp_and_humi_sensor.humidity()
 
@@ -134,7 +140,8 @@ class ProofBoxController():
         return b''
 
     def run(self):
-        print('begin run')
+        print('Proof Box Control Start')
+        # utime.sleep(2)
         count=0
         while(True):
             self.curr_temp,self.curr_humi = self.get_temp_and_humi()
@@ -158,9 +165,9 @@ class ProofBoxController():
 
             body={'temp':self.curr_temp,'humi':self.curr_humi,'is_heating':self.is_heating,'is_humi':self.is_humi,'is_fan':self.is_fan,'status':self.status,'proof_time':self.proof_time}
             self.notify_message({'type':MSG_TYPE_STATUS,'value':body})
-            utime.sleep(3)
+            utime.sleep(30)
             count +=1
-            if(count==20):
+            if(count==2):
                 buf=self.get_capture_img()
                 self.notify_message({'type':MSG_TYPE_CAPTURE,'value':buf})
                 count=0

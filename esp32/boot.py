@@ -21,3 +21,8 @@ for _ in range(15):
         utime.sleep(1)
 
 import machine
+import gc
+gc.collect()
+import main
+main.ProofBox()
+

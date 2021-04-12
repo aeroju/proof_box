@@ -11,9 +11,9 @@ def read_config():
                 CONFIG[key.strip()] = val.strip()
     print('read config done.')
 
-def save_config(config):
+def save_config():
     with open(config_file,'w') as fh:
-        for k,v in config.items():
+        for k,v in CONFIG.items():
             fh.write('{}={}\n'.format(k,v))
 
 MSG_TYPE_INIT=0
@@ -24,6 +24,7 @@ MSG_TYPE_CAPTURE=5
 MSG_TYPE_ERROR=10
 MSG_TYPE_CLIENT_STATUS=20
 MSG_TYPE_CHANGE_SETTINGS=21
+MSG_TYPE_MANUAL_OPERATION=22
 
 SETTINGS_MIN_TEMP='min_temp'
 SETTINGS_MAX_TEMP='max_temp'
@@ -37,5 +38,7 @@ STATUS_PROOFING=2
 STATUS_WAITING=1
 
 from message_center import MessageCenter
+import gc
+gc.enable()
 
 

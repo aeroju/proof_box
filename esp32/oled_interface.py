@@ -1,17 +1,26 @@
 from machine import Pin, I2C
-import ssd1306
+# from ssd1306 import SSD1306_I2C
+from oled import Write, SSD1306_I2C
+import fonts_32
+import fonts_16
+import utime
 from utils import *
 
+status_str=['Preparing','Waiting','Proofing']
 class OLED_interface():
     def __init__(self):
         self.i2c = I2C(-1, scl=Pin(int(CONFIG['oled_scl_pin'])), sda=Pin(int(CONFIG['oled_sda_pin'])))
         self.oled_width = int(CONFIG['oled_width'])
         self.oled_height = int(CONFIG['oled_height'])
-        self.oled = ssd1306.SSD1306_I2C(self.oled_width, self.oled_height, self.i2c)
+        self.oled = SSD1306_I2C(self.oled_width, self.oled_height, self.i2c)
+        self.write_32=self.oled
+        self.write_16=self.oled
+        self.write_32=Write(self.oled,fonts_32)
+        self.write_16=Write(self.oled,fonts_16)
         self.oled.invert(False)
         MessageCenter.registe_message_callback(MSG_TYPE_CLIENT_STATUS,self.display_message)
         MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.on_setting_change)
-        self.on_setting_change()
+        # self.on_setting_change()
 
     def on_setting_change(self):
         self.min_temp = int(CONFIG[SETTINGS_MIN_TEMP])
@@ -22,10 +31,10 @@ class OLED_interface():
     def display_message(self,msg):
         if(msg['type'] in (MSG_TYPE_INIT,MSG_TYPE_START,MSG_TYPE_STOP,MSG_TYPE_ERROR)):
             self.oled.fill(0)
-            self.oled.text(msg['value'],3,3)
+            self.write_16.text(msg['value'],3,3)
             self.oled.show()
         elif(msg['type']==MSG_TYPE_STATUS):
-            self.draw_status( msg['value'])
+            self.draw_status_new( msg['value'])
 
     def draw_status(self,status):
         self.oled.fill(0)
@@ -42,6 +51,25 @@ class OLED_interface():
         self.oled.text('F:{}'.format('On' if status['is_fan'] else 'Off'),86,50)
         self.oled.show()
 
-    # def draw_status(self,status):
-    #     self.oled.fill(0)
-    #     self.oled.text()
+    def status_to_str(self,st,st_time):
+        ret = status_str[st]
+        if(st==STATUS_PROOFING):
+            ret +=":"
+            h=int(st_time/3600)
+            m=int((st_time-h*3600)/60)+1
+            # s=st_time-h*3600-m*60
+            if(h>0):
+                ret += "{}H".format(h)
+            if(m>0):
+                ret += "{}M".format(m)
+            # ret += "{}S".format(s)
+        return ret
+
+    def draw_status_new(self,status):
+        self.oled.fill(0)
+        s = self.status_to_str(int(status['status']),int(status['proof_time']))
+        self.write_16.text(s,6,0)
+        self.write_32.text('{}D/{}%'.format(int(status['temp']),int(status['humi'])),8,16)
+        self.write_16.text('({},{})'.format(self.min_temp,self.max_temp),6,48)
+        self.write_16.text('({},{})'.format(self.min_humi,self.max_humi),69,48)
+        self.oled.show()

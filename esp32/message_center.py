@@ -1,5 +1,6 @@
 import _thread
 import utime
+import gc
 
 class Queue():
     def __init__(self):
@@ -17,6 +18,7 @@ class Queue():
     def get(self):
         if(self._lock.acquire()):
             try:
+                # print('message queue len:',len(self.messages))
                 if(len(self.messages)>0):
                     return self.messages.pop(0)
                 return None
@@ -60,9 +62,11 @@ class __MessageCenter():
                 else:
                     c()
             except Exception as e:
-                print(e)
+                print('error when call callback:',e,message,c)
+                pass
 
     def __comsume_message(self):
+        gc_count=0
         while (True):
             try:
                 msg = self.__messages.get()
@@ -72,10 +76,18 @@ class __MessageCenter():
                         calls = self.__message_callbacks.get(msg['message_type'], [])
                         self.__messages_callbacks_lock.release()
                     _thread.start_new_thread(self.__notify_message, (calls, msg['message_body']))
+                    # self.__notify_message(calls,msg['message_body'])
             except Exception as e:
-                print(e)
+                pass
+                # print('error when process message:',e,msg)
             finally:
-                utime.sleep(1)
+                utime.sleep(2)
+            if(gc_count>20):
+                gc.collect()
+                lt=utime.localtime()
+                print('{}:{}:{}'.format(lt[3],lt[4],lt[5]),' mem free:',gc.mem_free())
+                gc_count=0
+            gc_count+=1
 
 MessageCenter = __MessageCenter()
-MessageCenter.start()
+# MessageCenter.start()
