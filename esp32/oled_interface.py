@@ -4,6 +4,7 @@ from oled import Write, SSD1306_I2C
 import fonts_32
 import fonts_16
 import utime
+import _thread
 from utils import *
 
 status_str=['Preparing','Waiting','Proofing']
@@ -18,9 +19,12 @@ class OLED_interface():
         self.write_32=Write(self.oled,fonts_32)
         self.write_16=Write(self.oled,fonts_16)
         self.oled.invert(False)
+        self.oled.fill(0)
+        self.oled.show()
+        self._last_show_time=0
+        self._last_show_lock=_thread.allocate_lock()
         MessageCenter.registe_message_callback(MSG_TYPE_CLIENT_STATUS,self.display_message)
         MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.on_setting_change)
-        # self.on_setting_change()
 
     def on_setting_change(self):
         self.min_temp = int(CONFIG[SETTINGS_MIN_TEMP])
@@ -59,17 +63,29 @@ class OLED_interface():
             m=int((st_time-h*3600)/60)+1
             # s=st_time-h*3600-m*60
             if(h>0):
-                ret += "{}H".format(h)
+                ret += "{}:".format(h)
             if(m>0):
-                ret += "{}M".format(m)
+                ret += "{}:".format(m)
             # ret += "{}S".format(s)
         return ret
 
+    def sec_to_str(self,st_time):
+        h=int(st_time/3600)
+        m=int((st_time-h*3600)/60)
+        s=st_time-h*3600-m*60
+        return "{:02d}:{:02d}:{:02d}".format(h,m,s)
+
     def draw_status_new(self,status):
-        self.oled.fill(0)
-        s = self.status_to_str(int(status['status']),int(status['proof_time']))
-        self.write_16.text(s,6,0)
-        self.write_32.text('{}D/{}%'.format(int(status['temp']),int(status['humi'])),8,16)
-        self.write_16.text('({},{})'.format(self.min_temp,self.max_temp),6,48)
-        self.write_16.text('({},{})'.format(self.min_humi,self.max_humi),69,48)
-        self.oled.show()
+        if(self._last_show_lock.acquire()):
+            try:
+                ct = utime.time()
+                if(ct-self._last_show_time>=30):
+                    self.oled.fill(0)
+                    self.write_16.text(self.sec_to_str(int(status['proof_time'])),20,0)
+                    self.write_32.text('{}D/{}%'.format(int(status['temp']),int(status['humi'])),8,16)
+                    self.write_16.text('({},{})'.format(self.min_temp,self.max_temp),6,48)
+                    self.write_16.text('({},{})'.format(self.min_humi,self.max_humi),69,48)
+                    self.oled.show()
+                    self._last_show_time = ct
+            finally:
+                self._last_show_lock.release()

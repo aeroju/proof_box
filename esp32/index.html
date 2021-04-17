@@ -4,33 +4,45 @@
 <!DOCTYPE html>
 <html style="height: 100%">
     <head>
-        <title>DIY 发酵箱</title>
+        <title>My Proofing Box</title>
         <meta charset="utf-8">
     </head>
     <body style="height: 100%; margin: 0">
         <div id="status_div" style="width:80%;height:100" align="center">
             <table>
-                <tr><td>状态：</td><td><span id="curr_status">xx</span><input ID="operation" type="button" onclick="on_operation()" value="放入面团"> </td></tr>
+                <tr> <td height="30"></td></tr>
+
+                <tr>
+                    <td> <span lang=ZH-CN style="border-bottom: 1px solid #dddddd  font-size:12.0pt;bold;font-family:宋体;Calibri"><b>系统状态</b></span>：</td>
+<!--                    <td><select id="proof_material">-->
+<!--                        <option value="1">酵母</option>-->
+<!--                        <option value="2">一发</option>-->
+<!--                        <option value="2">二发</option>-->
+<!--                    </select></td>-->
+                    <td><span id="curr_status">xx</span><input ID="operation" type="button" onclick="on_operation()" value="放入面团">
+                        <input ID="reboot" type="button" onclick="on_reboot()" value="重启">
+                    </td>
+                </tr>
                 <tr>
                     <td>
                         <table width="100%">
-                            <tr style="border-bottom: 1px solid #dddddd">
-                                <td  style="border-bottom: 1px solid #dddddd">温度:<span id="curr_temp">df</span></td>
+                            <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
+                                <td style="border-bottom: 1px solid #dddddd">温度:</td> <td width="30" align="right"  id="curr_temp" >T</td>
                                 <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">(
-                                    <input type="number" id="min_temp" style="width:30px" onchange="if(value>=30){value=30 }else if(value<=20){ value=20}" value="23">
+                                    <input type="number" id="min_temp" style="width:30px" onchange="if(value>=40){value=40 }else if(value<=20){ value=20}" value="23">
                                     -
-                                    <input type="number" id="max_temp" style="width:30px" onchange="if(value>=30){value=30 }else if(value<=20){ value=20}" value="28">
+                                    <input type="number" id="max_temp" style="width:30px" onchange="if(value>=40){value=40 }else if(value<=20){ value=20}" value="28">
                                     <input type="button" onclick="on_temp_setup()" value="设置">
                                     )
                                 </td>
                             </tr>
-                            <tr style="border-bottom: 1px solid #dddddd">
-                                <td>湿度:<span id="curr_humi"></span></td>
-                                <td style="padding:10px 10px">
+                            <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
+                                <td style="border-bottom: 1px solid #dddddd">湿度: </td> <td width="30" align="right" id="curr_humi"> H </td>
+                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">
                                 (
-                                    <input type="number" id="min_humi" style="width:38px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="75">
+                                    <input type="number" id="min_humi" style="width:30px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="75">
                                     -
-                                    <input type="number" id="max_humi" style="width:38px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="85">
+                                    <input type="number" id="max_humi" style="width:30px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="85">
                                     <input type="button" onclick="on_humi_setup()" value="设置">
                                     )
                                 </td>
@@ -38,25 +50,30 @@
                         </table>
                     </td>
                 </tr>
+                <tr> <td height="30"></td></tr>
+
                 <tr>
-                    <td><b>内部状态:</b></td>
+                    <td style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri"><b>各功能状态:</b></td>
                 </tr>
                 <tr>
                     <td>
-                        <table>
+                        <table width="300">
                             <tr>
-                                <td>加热：<span id="is_heating"></span></td>
-                                <td>加湿：<span id="is_humi"></span></td>
-                                <td>排风：<span id="is_fan"></span></td>
+                                <td width="100">加热：</td><td width="30"><span id="is_heating"></span></td>
+                                <td width="100">加湿：</td><td width="30"><span id="is_humi"></span></td>
+                                <td width="100">排风：</td><td width="30"><span id="is_fan"></span></td>
                             </tr>
                         </table>
                     </td>
                 </tr>
+                <tr> <td height="30"></td></tr>
+                <tr><td style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri"><b>温湿度日志:</b></td></tr>
 
             </table>
 
 
         </div>
+
         <div id="container" style="width:80%;height:80%" align="center"></div>
 
         <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
@@ -75,7 +92,7 @@ var now = +new Date(1997, 9, 3);
 var oneDay = 24 * 3600 * 1000;
 option = {
     title: {
-        text: '发酵箱温湿度曲线'
+        text: '温湿度日志'
     },
     tooltip: {
         trigger: 'axis',
@@ -166,21 +183,47 @@ function init_page(){
         }
     });
 }
+var supported_materials;
+function get_supported_material(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_supported_material",
+        dataType: "json",
+        success: function (result) {
+            supported_materials=result.supported_materials
+            for(var i=0; i<supported_materials.length;i++){
+                $("#proof_material").append("<option value='" +result.materials[i].value + "'>" + result.materials[i].name + "</option>")
+            }
+        }
+    });
+}
+function set_settings(min_temp,max_temp,min_humi,max_humi){
+    $("#min_temp").val(min_temp);
+    $("#max_temp").val(max_temp);
+    $("#min_humi").val(min_humi);
+    $("#max_humi").val(max_humi);
+    option.series[0].markLine["data"][0]={yAxis:min_temp}
+    option.series[0].markLine["data"][1]={yAxis:max_temp}
+    option.series[1].markLine["data"][0]={yAxis:min_humi}
+    option.series[1].markLine["data"][1]={yAxis:max_humi}
+    myChart.setOption(option)
+}
 function get_settings(){
     $.ajax({
         type: "GET",
         url:"http://" + server + "/get_settings",
         dataType: "json",
         success: function (result) {
-            $("#min_temp").val(result.settings.min_temp);
-            $("#max_temp").val(result.settings.max_temp);
-            $("#min_humi").val(result.settings.min_humi);
-            $("#max_humi").val(result.settings.max_humi);
-            option.series[0].markLine["data"][0]={yAxis:$("#min_temp").val()}
-            option.series[0].markLine["data"][1]={yAxis:$("#max_temp").val()}
-            option.series[1].markLine["data"][0]={yAxis:$("#min_humi").val()}
-            option.series[1].markLine["data"][1]={yAxis:$("#max_humi").val()}
-            myChart.setOption(option)
+            set_settings(result.settings.min_temp,result.settings.max_temp,result.settings.min_humi,result.settings.max_humi)
+<!--            $("#min_temp").val(result.settings.min_temp);-->
+<!--            $("#max_temp").val(result.settings.max_temp);-->
+<!--            $("#min_humi").val(result.settings.min_humi);-->
+<!--            $("#max_humi").val(result.settings.max_humi);-->
+<!--            option.series[0].markLine["data"][0]={yAxis:$("#min_temp").val()}-->
+<!--            option.series[0].markLine["data"][1]={yAxis:$("#max_temp").val()}-->
+<!--            option.series[1].markLine["data"][0]={yAxis:$("#min_humi").val()}-->
+<!--            option.series[1].markLine["data"][1]={yAxis:$("#max_humi").val()}-->
+<!--            myChart.setOption(option)-->
         }
     });
 }
@@ -205,6 +248,13 @@ function on_humi_setup(){
         }
     })
 }
+function on_reboot(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/on_reboot?reboot=1",
+        dataType: "text",
+    })
+}
 function on_operation(){
     $.ajax({
         type: "GET",
@@ -222,10 +272,10 @@ function from_sec_to_str(s){
     var sl = s-h*3600-m*60;
     var ret="";
     if(h>0){
-        ret=ret+h+"小时" + m + "分钟";
+        ret=ret+h+"小时" + m + "分";
     }else{
         if(m>0){
-            ret = ret + m + "分钟";
+            ret = ret + m + "分";
         }
     }
     ret = ret + sl + "秒";
@@ -250,7 +300,7 @@ function get_status(){
                 $("#curr_status").text("预热完成，等待面团");
             }
             else if(result.status.status==2){
-                $("#curr_status").text("发酵中，已发酵：" + from_sec_to_str(result.status.proof_time));
+                $("#curr_status").text("工作中：" + from_sec_to_str(result.status.proof_time));
                 $("#operation").hide()
             }else{
                 $("#curr_status").text(result.status.status);
@@ -290,7 +340,7 @@ window.onload=function(){
     init_page()
     setInterval(function () {
         get_status()
-        }, 30000
+        }, 10000
     );
 }
 

@@ -20,9 +20,6 @@ for _ in range(15):
     except:
         utime.sleep(1)
 
-import machine
-import gc
-gc.collect()
-import main
-main.ProofBox()
+import proof_box_main
+proof_box_main.ProofBox()
 

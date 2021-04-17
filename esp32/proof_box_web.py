@@ -1,10 +1,8 @@
 import picoweb
-# import _thread
 import utime
 import ujson
 import uos
-# from utils import *
-import db_interface
+
 from web_interface import Web_Interface
 
 app = picoweb.WebApp(__name__)
@@ -98,6 +96,18 @@ def on_operation(req, resp):
     Web_Interface().on_operation(req.form['operation'])
     yield from picoweb.start_response(resp)
     yield from resp.awrite("OK")
+
+@app.route('/on_reboot')
+def on_reboot(req, resp):
+    yield from picoweb.start_response(resp)
+    yield from resp.awrite("Reboot OK")
+    Web_Interface().on_reboot()
+
+@app.route('/get_supported_material')
+def get_supported_material(req, resp):
+    ret = {'supported_materials':Web_Interface().get_supported_material()}
+    yield from picoweb.start_response(resp)
+    yield from resp.awrite(ret)
 
 def start_web():
     print('Web Server Start')
