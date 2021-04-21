@@ -28,21 +28,16 @@
                         <table width="100%">
                             <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
                                 <td style="border-bottom: 1px solid #dddddd">温度:</td> <td width="30" align="right"  id="curr_temp" >T</td>
-                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">(
-                                    <input type="number" id="min_temp" style="width:30px" onchange="if(value>=40){value=40 }else if(value<=20){ value=20}" value="23">
-                                    -
-                                    <input type="number" id="max_temp" style="width:30px" onchange="if(value>=40){value=40 }else if(value<=20){ value=20}" value="28">
+                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">设定值：(
+                                    <input type="number" id="target_temp" style="width:30px" onchange="if(value>=40){value=40 }else if(value<=20){ value=20}" value="28">
                                     <input type="button" onclick="on_temp_setup()" value="设置">
                                     )
                                 </td>
                             </tr>
                             <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
                                 <td style="border-bottom: 1px solid #dddddd">湿度: </td> <td width="30" align="right" id="curr_humi"> H </td>
-                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">
-                                (
-                                    <input type="number" id="min_humi" style="width:30px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="75">
-                                    -
-                                    <input type="number" id="max_humi" style="width:30px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="85">
+                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">设定值：(
+                                    <input type="number" id="target_humi" style="width:30px" onchange="if(value>=100){value=100 }else if(value<=50){ value=50}" value="80">
                                     <input type="button" onclick="on_humi_setup()" value="设置">
                                     )
                                 </td>
@@ -66,15 +61,21 @@
                         </table>
                     </td>
                 </tr>
-                <tr> <td height="30"></td></tr>
-                <tr><td style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri"><b>温湿度日志:</b></td></tr>
+<!--                <tr>-->
+<!--                    <td><img id="proof_box_image" width="320" height="240" src="http://192.168.31.105" onload="$('#proof_box_image').css('transform','rotate(270deg)')"/></td>-->
+<!--                </tr>-->
+<!--                <tr>-->
+<!--                    <td><div id="container" style="width:80%;height:80%" align="center"></div></td>-->
+<!--                </tr>-->
+<!--                <tr> <td height="30"></td></tr>-->
+<!--                <tr><td style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri"><b>温湿度日志:</b></td></tr>-->
 
             </table>
 
 
         </div>
+        <div id="container" style="width:80%;height:80%" align="center">
 
-        <div id="container" style="width:80%;height:80%" align="center"></div>
 
         <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
         <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
@@ -113,7 +114,7 @@ option = {
     },
     yAxis: {
         type: 'value',
-        boundaryGap: ['20%', '20%'],
+        boundaryGap: ['0%', '0%'],
         splitLine: {
             show: true
         }
@@ -133,8 +134,8 @@ option = {
         hoverAnimation: false,
         data: temp_his,
         markLine:{
-            data:[{yAxis: 20},
-                   {yAxis: 30}
+            data:[{yAxis: 20}
+<!--            ,{yAxis: 30}-->
             ]
         }
     },{
@@ -152,7 +153,9 @@ option = {
         hoverAnimation: false,
         data: humi_his,
         markLine:{
-            data:[{yAxis: 60},{yAxis: 80}]
+            data:[{yAxis: 60}
+<!--            ,{yAxis: 80}-->
+            ]
         }
     }
     ]
@@ -197,15 +200,13 @@ function get_supported_material(){
         }
     });
 }
-function set_settings(min_temp,max_temp,min_humi,max_humi){
-    $("#min_temp").val(min_temp);
-    $("#max_temp").val(max_temp);
-    $("#min_humi").val(min_humi);
-    $("#max_humi").val(max_humi);
-    option.series[0].markLine["data"][0]={yAxis:min_temp}
-    option.series[0].markLine["data"][1]={yAxis:max_temp}
-    option.series[1].markLine["data"][0]={yAxis:min_humi}
-    option.series[1].markLine["data"][1]={yAxis:max_humi}
+function set_settings(settings){
+    $("#target_temp").val(settings.target_temp);
+    $("#target_humi").val(settings.target_humi);
+    option.series[0].markLine["data"][0]={yAxis:settings.target_temp}
+<!--    option.series[0].markLine["data"][1]={yAxis:max_temp}-->
+    option.series[1].markLine["data"][0]={yAxis:settings.target_humi}
+<!--    option.series[1].markLine["data"][1]={yAxis:max_humi}-->
     myChart.setOption(option)
 }
 function get_settings(){
@@ -214,16 +215,7 @@ function get_settings(){
         url:"http://" + server + "/get_settings",
         dataType: "json",
         success: function (result) {
-            set_settings(result.settings.min_temp,result.settings.max_temp,result.settings.min_humi,result.settings.max_humi)
-<!--            $("#min_temp").val(result.settings.min_temp);-->
-<!--            $("#max_temp").val(result.settings.max_temp);-->
-<!--            $("#min_humi").val(result.settings.min_humi);-->
-<!--            $("#max_humi").val(result.settings.max_humi);-->
-<!--            option.series[0].markLine["data"][0]={yAxis:$("#min_temp").val()}-->
-<!--            option.series[0].markLine["data"][1]={yAxis:$("#max_temp").val()}-->
-<!--            option.series[1].markLine["data"][0]={yAxis:$("#min_humi").val()}-->
-<!--            option.series[1].markLine["data"][1]={yAxis:$("#max_humi").val()}-->
-<!--            myChart.setOption(option)-->
+            set_settings(result.settings)
         }
     });
 }
@@ -231,7 +223,7 @@ function get_settings(){
 function on_temp_setup(){
     $.ajax({
         type: "GET",
-        url:"http://" + server + "/change_settings?min_temp="+$("#min_temp").val() + "&max_temp="+$("#max_temp").val(),
+        url:"http://" + server + "/change_settings?target_temp="+$("#target_temp").val(),
         dataType: "text",
         success:function(data){
             get_settings()
@@ -241,7 +233,7 @@ function on_temp_setup(){
 function on_humi_setup(){
     $.ajax({
         type: "GET",
-        url:"http://" + server + "/change_settings?min_humi="+$("#min_humi").val() + "&max_humi="+$("#max_humi").val(),
+        url:"http://" + server + "/change_settings?target_humi="+$("#target_humi").val(),
         dataType: "text",
         success:function(data){
             get_settings()
@@ -289,10 +281,6 @@ function get_status(){
         success: function (result) {
             $("#curr_temp").html(result.status.temp);
             $("#curr_humi").html(result.status.humi);
-            $("#min_temp").val(result.status.min_temp);
-            $("#max_temp").val(result.status.max_temp);
-            $("#min_humi").val(result.status.min_humi);
-            $("#max_humi").val(result.status.max_humi);
             if(result.status.status==0){
                 $("#curr_status").text("预热中");
             }

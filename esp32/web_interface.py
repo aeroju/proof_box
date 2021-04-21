@@ -1,5 +1,6 @@
 import _thread
 from utils import *
+from message_center import MessageCenter
 
 class _Web_Interface():
     def __init__(self):
@@ -10,17 +11,16 @@ class _Web_Interface():
         # self.on_setting_change()
 
     def on_setting_change(self):
-        self.min_temp = CONFIG[SETTINGS_MIN_TEMP]
-        self.max_temp = CONFIG[SETTINGS_MAX_TEMP]
-        self.min_humi = CONFIG[SETTINGS_MIN_HUMI]
-        self.max_humi = CONFIG[SETTINGS_MAX_HUMI]
-        self.proof_material=CONFIG['proof_material']
+        self.target_temp=CONFIG[SETTINGS_TARGET_TEMP]
+        self.target_humi=CONFIG[SETTINGS_TARGET_HUMI]
+        # self.proof_material=CONFIG['proof_material']
 
     def display_message(self,msg):
         if(msg['type'] in (MSG_TYPE_INIT,MSG_TYPE_START,MSG_TYPE_STOP,MSG_TYPE_ERROR)):
             pass
         elif(msg['type']==MSG_TYPE_STATUS):
-            if(self._lock.acquire()):
+            if(self._lock.acquire(0)):
+                self.__status.clear()
                 for k,v in msg['value'].items():
                     self.__status[k]=v
                 self._lock.release()
@@ -36,6 +36,7 @@ class _Web_Interface():
     def update_settings(self,settings):
         for k,v in settings.items():
             CONFIG[k]=int(v)
+        self.on_setting_change()
         MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
 
     def on_operation(self,operation):
@@ -49,11 +50,9 @@ class _Web_Interface():
 
     def get_settings(self):
         settings={}
-        settings['min_temp']=self.min_temp
-        settings['max_temp']=self.max_temp
-        settings['min_humi']=self.min_humi
-        settings['max_humi']=self.max_humi
-        settings['proof_material']=self.proof_material
+        settings[SETTINGS_TARGET_TEMP]=self.target_temp
+        settings[SETTINGS_TARGET_HUMI]=self.target_humi
+        # settings['proof_material']=self.proof_material
         return settings
 
 

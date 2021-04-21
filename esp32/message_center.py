@@ -8,47 +8,43 @@ class Queue():
         self._lock = _thread.allocate_lock()
 
     def put(self,msg):
-        if(self._lock.acquire()):
+        if(self._lock.acquire(0)):
             try:
                 self.messages.append(msg)
+            except Exception as e:
+                print('error when put message:',e)
             finally:
                 self._lock.release()
         pass
 
     def get(self):
-        if(self._lock.acquire()):
+        if(self._lock.acquire(0)):
             try:
-                # print('message queue len:',len(self.messages))
                 if(len(self.messages)>0):
                     return self.messages.pop(0)
-                return None
             finally:
                 self._lock.release()
+        return None
 
 class __MessageCenter():
     def __init__(self):
         self.__message_callbacks = {}
         self.__messages = Queue()
-        self.__messages_callbacks_lock = _thread.allocate_lock()
         self.__process_thread = None
 
     def start(self):
         self.__process_thread=_thread.start_new_thread(self.__comsume_message,())
 
     def registe_message_callback(self,message_type, callback):
-        if(self.__messages_callbacks_lock.acquire()):
-            calls = self.__message_callbacks.get(message_type, [])
-            calls.append(callback)
-            self.__message_callbacks[message_type] = calls
-            self.__messages_callbacks_lock.release()
+        calls = self.__message_callbacks.get(message_type, [])
+        calls.append(callback)
+        self.__message_callbacks[message_type] = calls
 
     def remove_message_callback(self,message_type,callback):
-        if(self.__messages_callbacks_lock.acquire()):
-            calls = self.__message_callbacks.get(message_type,[])
-            if(calls.index(callback)>=0):
-                calls.pop(calls.index(callback))
-            self.__message_callbacks[message_type] = calls
-            self.__messages_callbacks_lock.release()
+        calls = self.__message_callbacks.get(message_type,[])
+        if(calls.index(callback)>=0):
+            calls.pop(calls.index(callback))
+        self.__message_callbacks[message_type] = calls
 
     def notify(self,message_type, message_body):
         message = {'message_type': message_type, 'message_body': message_body}
@@ -71,15 +67,11 @@ class __MessageCenter():
             try:
                 msg = self.__messages.get()
                 if(msg is not None):
-                    calls=[]
-                    if(self.__messages_callbacks_lock.acquire()):
-                        calls = self.__message_callbacks.get(msg['message_type'], [])
-                        self.__messages_callbacks_lock.release()
+                    calls = self.__message_callbacks.get(msg['message_type'], [])
                     _thread.start_new_thread(self.__notify_message, (calls, msg['message_body']))
                     # self.__notify_message(calls,msg['message_body'])
             except Exception as e:
                 pass
-                # print('error when process message:',e,msg)
             finally:
                 utime.sleep(2)
             if(gc_count>20):

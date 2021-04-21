@@ -3,8 +3,6 @@
 #######################
 #   import upip
 #   upip.install('picoweb')
-#   upip.install('uasyncio')
-#   upip.install('pycopy-ulogging')
 #   upip.install("micropython-oled")
 
 
@@ -15,9 +13,11 @@ import proof_box_web
 import web_interface
 # import power_controller
 from utils import *
+from message_center import MessageCenter
 import utime
 import gc
 import machine
+import _thread
 gc.enable()
 
 class ProofBox():
@@ -63,5 +63,37 @@ class ProofBox():
     def init_power_control(self):
         self._power_on_pin=machine.Pin(int(CONFIG['power_control_pin']),machine.Pin.OUT)
         self.power_on()
+        _thread.start_new_thread(self.touch_control,())
         MessageCenter.registe_message_callback(MSG_TYPE_MANUAL_OPERATION,self.on_manual_operation)
 
+    def touch_control(self):
+        light_status=False
+        t=0
+        touch_pad=machine.TouchPad(machine.Pin(int(CONFIG['touch_pad_pin'])))
+        while(True):
+            if(touch_pad.read()<200):
+                t=t+1
+            else:
+                if(t>0):
+                    if(t<=3):
+                        if(light_status):
+                            self.controller.inner_light_pin.off()
+                        else:
+                            self.controller.inner_light_pin.on()
+                        light_status=not light_status
+                    elif(t>=6):
+                        status=self.controller.status
+                        if(status+1 in [STATUS_PROOFING_JM,STATUS_PROOFING_1F,STATUS_PROOFING_2F]):
+                            self.oled_interface.change_status(status+1)
+                            self.controller.status=status+1
+                        else:
+                            self.controller.status=1
+                    elif(t>=20):
+                        touch_pad.config(300)
+                        import esp32
+                        esp32.wake_on_touch(True)
+                        self.controller.status=STATUS_SHUTTING_DOWN
+                        # MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
+                    t=0
+
+            utime.sleep_ms(500)

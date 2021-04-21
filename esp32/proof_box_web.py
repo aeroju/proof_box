@@ -24,9 +24,10 @@ def sendfile(writer, fname, content_type=None, headers=None):
     try:
         if(fname not in uos.listdir()):
             yield from picoweb.http_error(writer, "404")
-        with open(fname) as f:
-            yield from picoweb.start_response(writer, content_type, "200", headers)
-            yield from picoweb.sendstream(writer, f)
+        else:
+            with open(fname) as f:
+                yield from picoweb.start_response(writer, content_type, "200", headers)
+                yield from picoweb.sendstream(writer, f)
     except OSError as e:
         if e.args[0] == picoweb.uerrno.ENOENT:
             yield from picoweb.http_error(writer, "404")
@@ -41,10 +42,6 @@ def index(req, resp):
 @app.route('/get_status')
 def get_status(req, resp):
     status=Web_Interface().get_status()
-    status['min_temp']=Web_Interface().min_temp
-    status['max_temp']=Web_Interface().max_temp
-    status['min_humi']=Web_Interface().min_humi
-    status['max_humi']=Web_Interface().max_humi
     tt=utime.localtime()
     status['curr_time']='{}-{}-{} {}:{}:{}'.format(tt[0],tt[1],tt[2],tt[3],tt[4],tt[5])
     ret = {'status':status}
@@ -54,27 +51,16 @@ def get_status(req, resp):
 
 @app.route('/get_settings')
 def get_settings(req, resp):
-    status={}
-    status['min_temp']=Web_Interface().min_temp
-    status['max_temp']=Web_Interface().max_temp
-    status['min_humi']=Web_Interface().min_humi
-    status['max_humi']=Web_Interface().max_humi
+    settings=Web_Interface().get_settings()
 
-    ret = {'settings':status}
+    ret = {'settings':settings}
     yield from picoweb.start_response(resp)
     yield from resp.awrite(ujson.dumps(ret))
     pass
 
 @app.route('/get_his')
 def get_his(req, resp):
-    # his = db_interface.DB_Interface().read_history()
-    # ts=[t for t,h,m in his]
-    # hs=[h for t,h,m in his]
-    # ms=[m for t,h,m in his]
-    # ret={'times':ts,'temps':hs,'humis':ms}
-    # yield from picoweb.start_response(resp)
     yield from sendfile(resp,'proof_box.db')
-    # yield from resp.awrite(ujson.dumps(ret))
     pass
 
 @app.route('/change_settings')
