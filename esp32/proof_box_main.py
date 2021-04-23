@@ -46,7 +46,7 @@ class ProofBox():
             self.power_off()
             utime.sleep_ms(500)
             print('going to restart')
-            machine.soft_reset()
+            machine.reset()
         elif(op==OPERATION_POWER_DOWN):
             self.power_off()
             utime.sleep_ms(500)
@@ -81,6 +81,13 @@ class ProofBox():
                         else:
                             self.controller.inner_light_pin.on()
                         light_status=not light_status
+                    elif(t>=10):
+                        touch_pad.config(300)
+                        import esp32
+                        esp32.wake_on_touch(True)
+                        self.controller.status=STATUS_SHUTTING_DOWN
+                        print('begin shut down sequence')
+                        # MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
                     elif(t>=6):
                         status=self.controller.status
                         if(status+1 in [STATUS_PROOFING_JM,STATUS_PROOFING_1F,STATUS_PROOFING_2F]):
@@ -88,12 +95,7 @@ class ProofBox():
                             self.controller.status=status+1
                         else:
                             self.controller.status=1
-                    elif(t>=20):
-                        touch_pad.config(300)
-                        import esp32
-                        esp32.wake_on_touch(True)
-                        self.controller.status=STATUS_SHUTTING_DOWN
-                        # MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
+
                     t=0
 
             utime.sleep_ms(500)

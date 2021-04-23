@@ -14,12 +14,12 @@
 
                 <tr>
                     <td> <span lang=ZH-CN style="border-bottom: 1px solid #dddddd  font-size:12.0pt;bold;font-family:宋体;Calibri"><b>系统状态</b></span>：</td>
-<!--                    <td><select id="proof_material">-->
-<!--                        <option value="1">酵母</option>-->
-<!--                        <option value="2">一发</option>-->
-<!--                        <option value="2">二发</option>-->
-<!--                    </select></td>-->
-                    <td><span id="curr_status">xx</span><input ID="operation" type="button" onclick="on_operation()" value="放入面团">
+                    <td><select id="proof_material" onchange="$('#operation').show()">
+                        <option value="1">酵母</option>
+                        <option value="2">一发</option>
+                        <option value="3">二发</option>
+                    </select></td>
+                    <td><span id="curr_status">xx</span><input ID="operation" type="button" onclick="on_operation()" value="开始">
                         <input ID="reboot" type="button" onclick="on_reboot()" value="重启">
                     </td>
                 </tr>
@@ -250,11 +250,12 @@ function on_reboot(){
 function on_operation(){
     $.ajax({
         type: "GET",
-        url:"http://" + server + "/on_operation?operation=2",
+        url:"http://" + server + "/on_operation?operation="+$('#proof_material').val(),
         dataType: "text",
         success:function(data){
-            $("#operation").hide()
-            $("#curr_status").text("发酵中")
+        $("#operation").hide()
+            get_settings()
+<!--            $('#proof_material').-->
         }
     })
 }
@@ -281,18 +282,7 @@ function get_status(){
         success: function (result) {
             $("#curr_temp").html(result.status.temp);
             $("#curr_humi").html(result.status.humi);
-            if(result.status.status==0){
-                $("#curr_status").text("预热中");
-            }
-            else if(result.status.status==1){
-                $("#curr_status").text("预热完成，等待面团");
-            }
-            else if(result.status.status==2){
-                $("#curr_status").text("工作中：" + from_sec_to_str(result.status.proof_time));
-                $("#operation").hide()
-            }else{
-                $("#curr_status").text(result.status.status);
-            }
+            $("#curr_status").text("工作中：" + from_sec_to_str(result.status.proof_time));
             if(result.status.is_heating){
                 $("#is_heating").text("On")
             }else{
@@ -318,6 +308,14 @@ function get_status(){
                     {data: humi_his}
                     ]
                 });
+            }
+            if(result.status.status>0 && $('#proof_material').val()!=result.status.status){
+                get_settings()
+            }
+            if(result.status.status==0){
+                $('#operation').hide()
+                $('#proof_material').hide()
+                $("#curr_status").text("关闭中，正在排湿气，已工作：" + from_sec_to_str(result.status.proof_time));
             }
         }
     });

@@ -10,6 +10,7 @@ from message_center import MessageCenter
 class ProofBoxController():
     def __init__(self,fake=False):
         MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.read_settings)
+        MessageCenter.registe_message_callback(MSG_TYPE_MANUAL_OPERATION,self.change_proof_material)
         self._proof_start=utime.time()
         self._proof_status=STATUS_PROOFING_JM
         self._proof_status_lock=_thread.allocate_lock()
@@ -36,10 +37,31 @@ class ProofBoxController():
     def status(self,val):
         if(self._proof_status_lock.acquire()):
             try:
-                self._proof_status=val
-                self._proof_start = utime.time()
+                if(val>0 and val!=self._proof_status):
+                    if(val==STATUS_PROOFING_JM):
+                        CONFIG[SETTINGS_TARGET_TEMP]=25
+                        CONFIG[SETTINGS_TARGET_HUMI]=80
+                    elif(val==STATUS_PROOFING_1F):
+                        CONFIG[SETTINGS_TARGET_TEMP]=28
+                        CONFIG[SETTINGS_TARGET_HUMI]=85
+                        pass
+                    elif(val==STATUS_PROOFING_2F):
+                        CONFIG[SETTINGS_TARGET_TEMP]=33
+                        CONFIG[SETTINGS_TARGET_HUMI]=90
+                        pass
+                    self._proof_status=val
+                    self._proof_start = utime.time()
+                    self.read_settings()
+                else:
+                    self._proof_status=val
+                    print('controller into shutdown status')
             finally:
                 self._proof_status_lock.release()
+
+    def change_proof_material(self,pm):
+        if(pm>0):
+            self.status=pm
+            MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
 
     def notify_message(self,msg):
         MessageCenter.notify(MSG_TYPE_CLIENT_STATUS,msg)
@@ -54,11 +76,11 @@ class ProofBoxController():
     def read_settings(self):
         self.target_temp=int(CONFIG[SETTINGS_TARGET_TEMP])
         self.target_humi=int(CONFIG[SETTINGS_TARGET_HUMI])
-        self.min_temp=(self.target_temp-1) if (self.target_temp-1)>=20 else 20
-        self.max_temp=(self.target_temp+1) if (self.target_temp+1)<=40 else 40
-        self.min_humi = (self.target_humi-5) if (self.target_humi-5>=0) else 0
+        self.min_temp=self.target_temp + 0.2
+        self.max_temp=(self.target_temp+1.2) if (self.target_temp+1.2)<=40 else 40
+        self.min_humi = self.target_humi
         self.max_humi = (self.target_humi+5) if (self.target_humi+5<=100) else 100
-        print('{},{},{},{}',self.min_temp,self.max_temp,self.min_humi,self.max_humi)
+        # print('{},{},{},{}',self.min_temp,self.max_temp,self.min_humi,self.max_humi)
 
     def init_config(self):
         msg = {'type':MSG_TYPE_INIT,'value':'init config'}
@@ -76,10 +98,11 @@ class ProofBoxController():
         self.temp_and_humi_sensor = dht.DHT22(Pin(int(CONFIG['sensor_pin'])))
         self.heating_controler = Pin(int(CONFIG['heater_pin']),Pin.OUT)
         self.humi_controler = Pin(int(CONFIG['humi_pin']),Pin.OUT)
-        self.fan_controler  = Pin(int(CONFIG['fan_pin']),Pin.OUT)
+        self.fan_controler  = PWM(Pin(int(CONFIG['fan_pin'])),freq=100)
+        self.fan_controler.duty(0)
         self._fan_timer = Timer(0)
         self.inner_fan_pwm_controler=PWM(Pin(int(CONFIG['inner_fan_pwm_pin'])),freq=100)
-        self.inner_fan_pwm_controler.duty(100)
+        self.inner_fan_pwm_controler.duty(200)
         self._inner_fan_timer = Timer(1)
         self.inner_light_pin=Pin(int(CONFIG['inner_light_pin']),Pin.OUT)
 
@@ -108,7 +131,7 @@ class ProofBoxController():
         if(t is not None):
             t.deinit()
 
-    def start_inner_fan(self,is_auto=True,duty=100):
+    def start_inner_fan(self,is_auto=True,duty=200):
         if(not self._fake):
             self.inner_fan_pwm_controler.duty(duty)
             if(is_auto):
@@ -134,26 +157,39 @@ class ProofBoxController():
 
     def stop_fan(self,t = None):
         if(not self._fake):
-            self.fan_controler.off()
+            self.fan_controler.duty(0)
         if(t is not None):
             t.deinit()
         self.is_fan = False
 
     def start_fan(self,is_auto=True,duty=100):
         if(not self._fake):
-            self.fan_controler.on()
+            self.fan_controler.duty(200)
             if(is_auto):
-                self._fan_timer.init(mode=Timer.ONE_SHOT,period=2000,callback=self.stop_fan)
+                self._fan_timer.init(mode=Timer.ONE_SHOT,period=4000,callback=self.stop_fan)
         self.is_fan = True
 
     def drain(self):
+        self.stop_humi()
+        self.stop_heating()
         self.start_inner_fan(False,duty=1000)
         self.start_fan(False,duty=1000)
         self.inner_light_pin.off()
-        self.stop_humi()
-        self.stop_heating()
-        shutdown_timer=Timer(2)
-        shutdown_timer.init(mode=Timer.ONE_SHOT,period=120000,callback=lambda:MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN))
+        low_humi=0
+        drain_start = utime.time()
+        while(True):
+            self.curr_temp,self.curr_humi = self.get_temp_and_humi()
+            if(self.curr_humi<63):
+                low_humi+=1
+            if(low_humi>12):
+                self.stop_fan()
+                self.stop_inner_fan()
+                MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
+                break
+            else:
+                body={'temp':self.curr_temp,'humi':self.curr_humi,'is_heating':False,'is_humi':False,'is_fan':True,'status':STATUS_SHUTTING_DOWN,'proof_time':(utime.time()-drain_start)}
+                self.notify_message({'type':MSG_TYPE_STATUS,'value':body})
+            utime.sleep(5)
 
     def proof_control(self,proof_material):
         self.curr_temp,self.curr_humi = self.get_temp_and_humi()
@@ -183,9 +219,11 @@ class ProofBoxController():
             if(cs>0):
                 self.proof_control(cs)
                 utime.sleep(10)
-            else:
+            elif(cs==STATUS_SHUTTING_DOWN):
+                self.drain()
                 break
-        self.drain()
+
+
 
 
 
