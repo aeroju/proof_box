@@ -12,8 +12,9 @@ class ProofBoxController():
         MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.read_settings)
         MessageCenter.registe_message_callback(MSG_TYPE_MANUAL_OPERATION,self.change_proof_material)
         self._proof_start=utime.time()
-        self._proof_status=STATUS_PROOFING_JM
+        self._proof_status=-1
         self._proof_status_lock=_thread.allocate_lock()
+        self.status=STATUS_PROOFING_JM
         self._fake = fake
         self._inner_fan_status = 0
 
@@ -97,6 +98,7 @@ class ProofBoxController():
         self.notify_message(msg)
         self.temp_and_humi_sensor = dht.DHT22(Pin(int(CONFIG['sensor_pin'])))
         self.heating_controler = Pin(int(CONFIG['heater_pin']),Pin.OUT)
+        self.ex_heating_controler=Pin(int(CONFIG['ex_heater_pin']),Pin.OUT)
         self.humi_controler = Pin(int(CONFIG['humi_pin']),Pin.OUT)
         self.fan_controler  = PWM(Pin(int(CONFIG['fan_pin'])),freq=100)
         self.fan_controler.duty(0)
@@ -118,11 +120,13 @@ class ProofBoxController():
     def stop_heating(self):
         if(not self._fake):
             self.heating_controler.off()
+            self.ex_heating_controler.off()
         self.is_heating = False
 
     def start_heating(self):
         if(not self._fake):
             self.heating_controler.on()
+            self.ex_heating_controler.on()
         self.is_heating = True
 
     def stop_inner_fan(self,t=None):
@@ -179,8 +183,8 @@ class ProofBoxController():
         drain_start = utime.time()
         while(True):
             self.curr_temp,self.curr_humi = self.get_temp_and_humi()
-            if(self.curr_humi<63):
-                low_humi+=1
+            if(self.curr_humi<64):
+                low_humi=low_humi+1
             if(low_humi>12):
                 self.stop_fan()
                 self.stop_inner_fan()
