@@ -180,12 +180,13 @@ class ProofBoxController():
         self.start_fan(False,duty=1000)
         self.inner_light_pin.off()
         low_humi=0
+        max_drain=0
         drain_start = utime.time()
         while(True):
             self.curr_temp,self.curr_humi = self.get_temp_and_humi()
             if(self.curr_humi<64):
                 low_humi=low_humi+1
-            if(low_humi>12):
+            if(low_humi>12 or max_drain<120):
                 self.stop_fan()
                 self.stop_inner_fan()
                 MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
@@ -194,6 +195,7 @@ class ProofBoxController():
                 body={'temp':self.curr_temp,'humi':self.curr_humi,'is_heating':False,'is_humi':False,'is_fan':True,'status':STATUS_SHUTTING_DOWN,'proof_time':(utime.time()-drain_start)}
                 self.notify_message({'type':MSG_TYPE_STATUS,'value':body})
             utime.sleep(5)
+            max_drain+=1
 
     def proof_control(self,proof_material):
         self.curr_temp,self.curr_humi = self.get_temp_and_humi()
