@@ -3,6 +3,7 @@ import dht
 import uos
 import _thread
 from machine import Pin,PWM,Timer,TouchPad
+from uart_sm78 import SM78
 import utime
 from utils import *
 from message_center import MessageCenter
@@ -59,6 +60,22 @@ class ProofBoxController():
             finally:
                 self._proof_status_lock.release()
 
+    @property
+    def is_heating(self):
+        if( self._proof_status_lock.acquire()):
+            try:
+                return self._is_heating
+            finally:
+                self._proof_status_lock.release()
+
+    @is_heating.setter
+    def is_heating(self,s):
+        if( self._proof_status_lock.acquire()):
+            try:
+                self._is_heating = s
+            finally:
+                self._proof_status_lock.release()
+
     def change_proof_material(self,pm):
         if(pm>0):
             self.status=pm
@@ -87,7 +104,7 @@ class ProofBoxController():
         msg = {'type':MSG_TYPE_INIT,'value':'init config'}
         self.notify_message(msg)
         self.read_settings()
-        self.is_heating = False
+        self._is_heating = False
         self.is_fan = False
         self.is_humi = False
         self.curr_temp = 23
@@ -96,9 +113,13 @@ class ProofBoxController():
     def init_devices(self):
         msg = {'type':MSG_TYPE_INIT,'value':'init devices'}
         self.notify_message(msg)
-        self.temp_and_humi_sensor = dht.DHT22(Pin(int(CONFIG['sensor_pin'])))
-        self.heating_controler = Pin(int(CONFIG['heater_pin']),Pin.OUT)
-        self.ex_heating_controler=Pin(int(CONFIG['ex_heater_pin']),Pin.OUT)
+        # self.temp_and_humi_sensor = dht.DHT22(Pin(int(CONFIG['sensor_pin'])))
+        self.temp_and_humi_sensor=SM78(tx=int(CONFIG['sm78_tx']),rx=int(CONFIG['sm78_rx']),ctl=int(CONFIG['sm78_ctl']))
+        self.heater1_controler = Pin(int(CONFIG['heater1_pin']),Pin.OUT)
+        self.heater2_controler = Pin(int(CONFIG['heater2_pin']),Pin.OUT)
+        self.low_header_control = Pin(int(CONFIG['low_heater_pin']),Pin.OUT)
+        self.inner_fan_duty=200
+        self._heater_timer=Timer(2)
         self.humi_controler = Pin(int(CONFIG['humi_pin']),Pin.OUT)
         self.fan_controler  = PWM(Pin(int(CONFIG['fan_pin'])),freq=100)
         self.fan_controler.duty(0)
@@ -117,17 +138,37 @@ class ProofBoxController():
             pass
         return self.temp_and_humi_sensor.temperature(),self.temp_and_humi_sensor.humidity()
 
-    def stop_heating(self):
+    def stop_heating(self,t=None):
         if(not self._fake):
-            self.heating_controler.off()
-            self.ex_heating_controler.off()
+            self.heater1_controler.off()
+            self.heater2_controler.off()
+            self.low_header_control.off()
         self.is_heating = False
+        if(t is not None):
+            t.deinit()
 
-    def start_heating(self):
+    def heater_control(self,curr_temp,setup_temp):
         if(not self._fake):
-            self.heating_controler.on()
-            self.ex_heating_controler.on()
-        self.is_heating = True
+            gap=setup_temp-curr_temp
+            if(gap>=5):
+                self.heater1_controler.on()
+                self.heater2_controler.on()
+                self.is_heating = 3
+                self.inner_fan_duty=800
+                # self._heater_timer.init(mode=Timer.ONE_SHOT,period=8000,callback=self.stop_heating)
+            elif(gap>=3):
+                self.heater1_controler.on()
+                self.is_heating = 2
+                self.inner_fan_duty=600
+                # self._heater_timer.init(mode=Timer.ONE_SHOT,period=6000,callback=self.stop_heating)
+            elif(gap>=1):
+                self.low_header_control.on()
+                self.is_heating = 1
+                self.inner_fan_duty=200
+                # self._heater_timer.init(mode=Timer.ONE_SHOT,period=4000,callback=self.stop_heating)
+            else:
+                self.stop_heating()
+                self.is_heating = False
 
     def stop_inner_fan(self,t=None):
         if(not self._fake):
@@ -135,15 +176,15 @@ class ProofBoxController():
         if(t is not None):
             t.deinit()
 
-    def start_inner_fan(self,is_auto=True,duty=200):
+    def start_inner_fan(self,is_auto=True,duty=800):
         if(not self._fake):
             self.inner_fan_pwm_controler.duty(duty)
             if(is_auto):
-                self._inner_fan_timer.init(mode=Timer.ONE_SHOT,period=4000,callback=self.stop_inner_fan)
+                self._inner_fan_timer.init(mode=Timer.ONE_SHOT,period=8000,callback=self.stop_inner_fan)
 
     def invert_inner_fan(self):
-        if(self._inner_fan_status>9):
-            self.start_inner_fan()
+        if(self._inner_fan_status>=2):
+            self.start_inner_fan(is_auto=True,duty=self.inner_fan_duty)
             self._inner_fan_status=0
         else:
             self.stop_inner_fan()
@@ -168,7 +209,7 @@ class ProofBoxController():
 
     def start_fan(self,is_auto=True,duty=100):
         if(not self._fake):
-            self.fan_controler.duty(200)
+            self.fan_controler.duty(800)
             if(is_auto):
                 self._fan_timer.init(mode=Timer.ONE_SHOT,period=4000,callback=self.stop_fan)
         self.is_fan = True
@@ -184,9 +225,9 @@ class ProofBoxController():
         drain_start = utime.time()
         while(True):
             self.curr_temp,self.curr_humi = self.get_temp_and_humi()
-            if(self.curr_humi<64):
+            if(self.curr_humi<70):
                 low_humi=low_humi+1
-            if(low_humi>12 or max_drain<120):
+            if(low_humi>12 or max_drain>=120): #humi low than 70 for 1 minutes or drain for 10 minutes
                 self.stop_fan()
                 self.stop_inner_fan()
                 MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
@@ -200,10 +241,7 @@ class ProofBoxController():
     def proof_control(self,proof_material):
         self.curr_temp,self.curr_humi = self.get_temp_and_humi()
         self.invert_inner_fan()
-        if(self.curr_temp>self.min_temp):
-            self.stop_heating()
-        else:
-            self.start_heating()
+        self.heater_control(self.curr_temp,self.min_temp)
         if(self.curr_humi>self.min_humi):
             self.stop_humi()
         else:

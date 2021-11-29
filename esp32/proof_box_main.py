@@ -5,20 +5,22 @@
 #   upip.install('picoweb')
 #   upip.install("micropython-oled")
 
+import utime
+import machine
+import _thread
+import gc
+gc.enable()
 
 import proof_box_controller
 import oled_interface
 import db_interface
+gc.collect()
 import proof_box_web
 import web_interface
 # import power_controller
 from utils import *
 from message_center import MessageCenter
-import utime
-import gc
-import machine
-import _thread
-gc.enable()
+
 
 class ProofBox():
     def __init__(self):
@@ -52,6 +54,9 @@ class ProofBox():
             utime.sleep_ms(500)
             print('going to deep sleep, touch to restart')
             machine.deepsleep()
+        elif(op==OPERATION_BEGIN_POWER_DOWN):
+            self.controller.status=STATUS_SHUTTING_DOWN
+            print('begin shut down sequence')
 
     def power_on(self):
         self._power_on_pin.on()

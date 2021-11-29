@@ -19,8 +19,10 @@
                         <option value="2">一发</option>
                         <option value="3">二发</option>
                     </select></td>
-                    <td><span id="curr_status">xx</span><input ID="operation" type="button" onclick="on_operation()" value="开始">
+                    <td><span id="curr_status">xx</span>
+                        <input ID="operation" type="button" onclick="on_operation()" value="开始">
                         <input ID="reboot" type="button" onclick="on_reboot()" value="重启">
+                        <input ID="shutdown" type="button" onclick="on_shutdown()" value="重启">
                     </td>
                 </tr>
                 <tr>
@@ -247,6 +249,13 @@ function on_reboot(){
         dataType: "text",
     })
 }
+function on_shutdown(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/on_reboot?reboot=2",
+        dataType: "text",
+    })
+}
 function on_operation(){
     $.ajax({
         type: "GET",
@@ -283,8 +292,8 @@ function get_status(){
             $("#curr_temp").html(result.status.temp);
             $("#curr_humi").html(result.status.humi);
             $("#curr_status").text("工作中：" + from_sec_to_str(result.status.proof_time));
-            if(result.status.is_heating){
-                $("#is_heating").text("On")
+            if(result.status.is_heating>0){
+                $("#is_heating").text("On(" + result.status.is_heating + ")")
             }else{
                 $("#is_heating").text("Off")
             }
