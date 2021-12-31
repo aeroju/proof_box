@@ -12,11 +12,13 @@ import gc
 gc.enable()
 
 import proof_box_controller
-import oled_interface
+# import oled_interface
+import led_interface
 import db_interface
 gc.collect()
 import proof_box_web
 import web_interface
+import keypad
 # import power_controller
 from utils import *
 from message_center import MessageCenter
@@ -28,10 +30,12 @@ class ProofBox():
         gc.collect()
         print('mem before startup:',gc.mem_free())
         self.init_power_control()
+        self.init_keypad_control()
         # 启动温湿度控制
         self.controller = proof_box_controller.ProofBoxController()
         # 启动显示界面
-        self.oled_interface = oled_interface.OLED_interface()
+        # self.oled_interface = oled_interface.OLED_interface()
+        self.led_interface=led_interface.LED_Interface()
         self.db_interface = db_interface.DB_Interface()
         self.web_interface = web_interface.Web_Interface()
         MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
@@ -54,9 +58,6 @@ class ProofBox():
             utime.sleep_ms(500)
             print('going to deep sleep, touch to restart')
             machine.deepsleep()
-        elif(op==OPERATION_BEGIN_POWER_DOWN):
-            self.controller.status=STATUS_SHUTTING_DOWN
-            print('begin shut down sequence')
 
     def power_on(self):
         self._power_on_pin.on()
@@ -65,6 +66,40 @@ class ProofBox():
     def power_off(self):
         self._power_on_pin.off()
 
+    # def start_power_off_sequence(self):
+    #     MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_BEGIN_POWER_DOWN)
+    #     # self.controller.status=STATUS_SHUTTING_DOWN
+
+    def key_control(self,keys):
+        if(keys is None):
+            return
+        if(len(keys)>1):
+            if('TEMP_UP' in keys and 'TEMP_DOWN' in keys):
+                MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_SWITCH_LIGHT)
+            if('HUMI_UP' in keys and 'HUMI_DOWN' in keys):
+                MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_BEGIN_POWER_DOWN)
+        else:
+            if('TEMP_UP' in keys):
+                CONFIG['target_temp']=int(CONFIG['target_temp'])+1
+            elif('TEMP_DOWN' in keys):
+                CONFIG['target_temp']=int(CONFIG['target_temp'])-1
+            elif('HUMI_UP' in keys):
+                CONFIG['target_humi']=int(CONFIG['target_humi'])+1
+            elif('HUMI_DOWN' in keys):
+                CONFIG['target_humi']=int(CONFIG['target_humi'])-1
+            MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
+            self.led_interface.display_setup(CONFIG['target_temp'],CONFIG['target_humi'])
+
+
+    def init_keypad_control(self):
+        keys={'TEMP_UP':int(CONFIG['temp_up_pin']),
+              'TEMP_DOWN':int(CONFIG['temp_down_pin']),
+              'HUMI_UP':int(CONFIG['humi_up_pin']),
+              'HUMI_DOWN':int(CONFIG['humi_down_pin'])}
+        self.keypad=keypad.Keypad(keys)
+        self.keypad.register_callback(self.key_control)
+        self.keypad.start()
+
     def init_power_control(self):
         self._power_on_pin=machine.Pin(int(CONFIG['power_control_pin']),machine.Pin.OUT)
         self.power_on()
@@ -72,7 +107,6 @@ class ProofBox():
         MessageCenter.registe_message_callback(MSG_TYPE_MANUAL_OPERATION,self.on_manual_operation)
 
     def touch_control(self):
-        light_status=False
         t=0
         touch_pad=machine.TouchPad(machine.Pin(int(CONFIG['touch_pad_pin'])))
         while(True):
@@ -81,22 +115,18 @@ class ProofBox():
             else:
                 if(t>0):
                     if(t<=3):
-                        if(light_status):
-                            self.controller.inner_light_pin.off()
-                        else:
-                            self.controller.inner_light_pin.on()
-                        light_status=not light_status
+                        MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_SWITCH_LIGHT)
                     elif(t>=10):
                         touch_pad.config(300)
                         import esp32
                         esp32.wake_on_touch(True)
-                        self.controller.status=STATUS_SHUTTING_DOWN
+                        MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_BEGIN_POWER_DOWN)
                         print('begin shut down sequence')
                         # MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
                     elif(t>=6):
                         status=self.controller.status
                         if(status+1 in [STATUS_PROOFING_JM,STATUS_PROOFING_1F,STATUS_PROOFING_2F]):
-                            self.oled_interface.change_status(status+1)
+                            # self.oled_interface.change_status(status+1)
                             self.controller.status=status+1
                         else:
                             self.controller.status=1
@@ -104,3 +134,7 @@ class ProofBox():
                     t=0
 
             utime.sleep_ms(500)
+
+class ExternalControl():
+    def __init__(self):
+        pass

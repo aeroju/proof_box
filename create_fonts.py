@@ -6,8 +6,10 @@ import gen
 chinese={'M1':'\u4e00'}
 print(gen.generate_oled_font('楷体-简',16,chinese))
 
-# cs={}
+# cs={}º
 # for i in range(32, 127):
 #     cs[chr(i)]=chr(i)
 # font = gen.generate_oled_font("Arial", 16,cs) #any instaled font at any size
 # print(font)
+
+gen.generate_oled_font("Arial", 32, {':':':'})

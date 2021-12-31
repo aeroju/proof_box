@@ -89,6 +89,16 @@ def on_reboot(req, resp):
     yield from resp.awrite("Reboot OK")
     Web_Interface().on_reboot()
 
+@app.route('/on_manual_op')
+def on_manual_op(req, resp):
+    if req.method == "POST":
+        yield from req.read_form_data()
+    else:
+        req.parse_qs()
+    Web_Interface().on_manual_operation(req.form['op'])
+    yield from picoweb.start_response(resp)
+    yield from resp.awrite("Reboot OK")
+
 @app.route('/get_supported_material')
 def get_supported_material(req, resp):
     ret = {'supported_materials':Web_Interface().get_supported_material()}

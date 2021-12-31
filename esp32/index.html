@@ -21,8 +21,9 @@
                     </select></td>
                     <td><span id="curr_status">xx</span>
                         <input ID="operation" type="button" onclick="on_operation()" value="开始">
-                        <input ID="reboot" type="button" onclick="on_reboot()" value="重启">
-                        <input ID="shutdown" type="button" onclick="on_shutdown()" value="重启">
+                        <input ID="light" type="button" onclick="on_manual_op(40)" value="开灯/关灯">
+                        <input ID="reboot" type="button" onclick="on_manual_op(30)" value="重启">
+                        <input ID="shutdown" type="button" onclick="on_manual_op(32)" value="关机">
                     </td>
                 </tr>
                 <tr>
@@ -249,10 +250,10 @@ function on_reboot(){
         dataType: "text",
     })
 }
-function on_shutdown(){
+function on_manual_op(op){
     $.ajax({
         type: "GET",
-        url:"http://" + server + "/on_reboot?reboot=2",
+        url:"http://" + server + "/on_manual_op?op=" + op,
         dataType: "text",
     })
 }
@@ -291,6 +292,7 @@ function get_status(){
         success: function (result) {
             $("#curr_temp").html(result.status.temp);
             $("#curr_humi").html(result.status.humi);
+            document.title='发酵箱('+result.status.temp + ',' + result.status.humi + ')';
             $("#curr_status").text("工作中：" + from_sec_to_str(result.status.proof_time));
             if(result.status.is_heating>0){
                 $("#is_heating").text("On(" + result.status.is_heating + ")")

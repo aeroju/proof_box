@@ -11,7 +11,7 @@ def wlan_connect(ssid='3-4-102', password='1234567812',retry=10):
             cnt+=1
             pass
     print('network config:', wlan.ifconfig())
-    return wlan.isconnected
+    return wlan.isconnected()
 
 
 

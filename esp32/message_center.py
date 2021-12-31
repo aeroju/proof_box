@@ -2,6 +2,33 @@ import _thread
 import utime
 import gc
 
+class Event():
+    def __init(self):
+        self._lock=_thread.allocate_lock()
+        self._is_set=False
+
+    def is_set(self):
+        if(self._lock.acquire()):
+            try:
+                return self._is_set
+            finally:
+                self._lock.release()
+
+    def set(self):
+        if(self._lock.acquire()):
+            try:
+                self._is_set = True
+            finally:
+                self._lock.release()
+
+    def clear(self):
+        if(self._lock.acquire()):
+            try:
+                self._is_set = False
+            finally:
+                self._lock.release()
+
+
 class Queue():
     def __init__(self):
         self.messages=[]

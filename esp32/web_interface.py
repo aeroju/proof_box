@@ -42,8 +42,8 @@ class _Web_Interface():
     def on_operation(self,operation):
         MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,int(operation))
 
-    def on_reboot(self):
-        MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_RESET)
+    def on_manual_operation(self,op):
+        MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,op)
 
     def get_supported_material(self):
         return CONFIG['supported_materials']
