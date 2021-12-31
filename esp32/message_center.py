@@ -3,7 +3,7 @@ import utime
 import gc
 
 class Event():
-    def __init(self):
+    def __init__(self):
         self._lock=_thread.allocate_lock()
         self._is_set=False
 

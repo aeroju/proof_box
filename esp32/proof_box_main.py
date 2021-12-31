@@ -38,7 +38,7 @@ class ProofBox():
         self.led_interface=led_interface.LED_Interface()
         self.db_interface = db_interface.DB_Interface()
         self.web_interface = web_interface.Web_Interface()
-        MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
+        # MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
         MessageCenter.start()
         self.controller.start()
         gc.collect()
@@ -80,15 +80,16 @@ class ProofBox():
                 MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_BEGIN_POWER_DOWN)
         else:
             if('TEMP_UP' in keys):
-                CONFIG['target_temp']=int(CONFIG['target_temp'])+1
+                target_temp=self.controller.target_temp+1
             elif('TEMP_DOWN' in keys):
-                CONFIG['target_temp']=int(CONFIG['target_temp'])-1
+                target_temp=self.controller.target_temp-1
             elif('HUMI_UP' in keys):
-                CONFIG['target_humi']=int(CONFIG['target_humi'])+1
+                target_humi=self.controller.target_humi+1
             elif('HUMI_DOWN' in keys):
-                CONFIG['target_humi']=int(CONFIG['target_humi'])-1
-            MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
-            self.led_interface.display_setup(CONFIG['target_temp'],CONFIG['target_humi'])
+                target_humi=self.controller.target_humi-1
+            msg={'target_type':self.controller.status,'settings':{'target_temp':target_temp,'target_humi':target_humi}}
+            MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,msg)
+            self.led_interface.display_setup(target_temp,target_humi)
 
 
     def init_keypad_control(self):
@@ -125,11 +126,12 @@ class ProofBox():
                         # MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_POWER_DOWN)
                     elif(t>=6):
                         status=self.controller.status
-                        if(status+1 in [STATUS_PROOFING_JM,STATUS_PROOFING_1F,STATUS_PROOFING_2F]):
-                            # self.oled_interface.change_status(status+1)
-                            self.controller.status=status+1
+                        if(status+1 in [TARGET_JM,TARGET_F1,TARGET_F2]):
+                            status=status+1
                         else:
-                            self.controller.status=1
+                            status=1
+                        msg={'target_type':status,'settings':JM_SETTING if status==TARGET_JM else F1_SETTING if status==TARGET_F1 else F2_SETTING if status==TARGET_F2 else JM_SETTING}
+                        MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,msg)
 
                     t=0
 

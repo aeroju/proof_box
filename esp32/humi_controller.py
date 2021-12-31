@@ -6,6 +6,7 @@ class HumiController():
         self.humi_pin=humi_pin
         self._time=None
         self._last_humi=None
+        self._target_humi = 75
 
     def _slip_rate(self,curr_humi):
         if(curr_humi is None or curr_humi < 0.01):

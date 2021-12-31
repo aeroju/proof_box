@@ -15,12 +15,13 @@ from humi_controller import HumiController
 
 class ProofBoxController():
     def __init__(self,fake=False):
-        MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.read_settings)
+        MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.on_change_settings)
         MessageCenter.registe_message_callback(MSG_TYPE_MANUAL_OPERATION,self.on_manual_control)
         self._proof_start=utime.time()
         self._proof_status=-1
         self._proof_status_lock=_thread.allocate_lock()
         self.heater_control = None
+        self.humi_controler = None
         self._fake = fake
         self._inner_fan_status = 0
         self.status=TARGET_JM
@@ -60,6 +61,12 @@ class ProofBoxController():
         elif(pm==OPERATION_SWITCH_LIGHT):
             self.switch_light()
 
+    def on_change_settings(self,msg):
+        target_type=TARGET_JM if msg.get('target_type') is None else msg.get('target_type')
+        settings=JM_SETTING if msg.get('settings') is None else msg.get('settings')
+        self.status=target_type
+        self.init_settings(settings)
+
     def notify_message(self,msg):
         MessageCenter.notify(MSG_TYPE_CLIENT_STATUS,msg)
 
@@ -73,7 +80,7 @@ class ProofBoxController():
     def init_settings(self,settings):
         self.target_temp=settings['target_temp']
         self.target_humi=settings['target_humi']
-        temp_tolerence=[-1,1] if settings.get('humi_tolerence') is None else settings.get('humi_tolerence')
+        temp_tolerence=[-1,1] if settings.get('temp_tolerence') is None else settings.get('temp_tolerence')
         humi_tolerence=[-5,5] if settings.get('humi_tolerence') is None else settings.get('humi_tolerence')
         self.min_temp=self.target_temp+temp_tolerence[0]
         self.max_temp=self.target_temp+temp_tolerence[1]
