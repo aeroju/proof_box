@@ -35,7 +35,7 @@ class ProofBox():
         self.controller = proof_box_controller.ProofBoxController()
         # 启动显示界面
         # self.oled_interface = oled_interface.OLED_interface()
-        self.led_interface=led_interface.LED_Interface()
+        # self.led_interface=led_interface.LED_Interface()
         self.db_interface = db_interface.DB_Interface()
         self.web_interface = web_interface.Web_Interface()
         # MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
