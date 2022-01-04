@@ -30,7 +30,6 @@ class ProofBox():
         gc.collect()
         print('mem before startup:',gc.mem_free())
         self.init_power_control()
-        self.init_keypad_control()
         # 启动温湿度控制
         self.controller = proof_box_controller.ProofBoxController()
         # 启动显示界面
@@ -45,6 +44,7 @@ class ProofBox():
         utime.sleep(2)
         print('mem after controller startup:',gc.mem_free())
         proof_box_web.start_web()
+        self.init_keypad_control()
         pass
 
     def on_manual_operation(self,op):

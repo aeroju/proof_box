@@ -83,7 +83,7 @@ class Matrix8x8:
         for command,data in (
                 (0x09,0xff), #decode mode BCD
                 (0x0a, 0x03), # brightness=3
-                (0x0b,0x0f), #scan limit=7
+                (0x0b,0x07), #scan limit=7
                 (0x0c, 0x01),# drop mode=1
                 (0x0f,0x01) # show test
         ):
@@ -105,6 +105,9 @@ class Matrix8x8:
 
     def write_txt(self,txt):
         self.flash_timer.deinit()
+        self._write_txt(txt)
+
+    def _write_txt(self,txt):
         for i in range(self.num):
             self._write(i,0xf)
         pos=self.num
@@ -127,14 +130,17 @@ class Matrix8x8:
 
     def _flash(self,t):
         if(self._is_flash):
-            self.write_txt(self.content_to_show)
+            print('write content:',self.content_to_show)
+            self._write_txt(self.content_to_show)
         else:
+            print('flash')
             for i in range(self.num):
                 self._write(i,0xf)
         self._is_flash = not self._is_flash
         if(utime.time()-self.flash_start_time>5):
+            print('flash end')
             t.deinit()
-            self.write_txt(self.content_to_show)
+            self._write_txt(self.content_to_show)
 
     def write_flash_txt(self,txt,interval=500):
         self.flash_timer.deinit()
