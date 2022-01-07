@@ -43,6 +43,7 @@ class _Web_Interface():
         MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,int(operation))
 
     def on_manual_operation(self,op):
+        print('send manual operation message:',op)
         MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,op)
 
     def get_supported_material(self):

@@ -38,16 +38,18 @@ class ProofBox():
         self.db_interface = db_interface.DB_Interface()
         self.web_interface = web_interface.Web_Interface()
         # MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
+        self.init_keypad_control()
         MessageCenter.start()
         self.controller.start()
         gc.collect()
         utime.sleep(2)
         print('mem after controller startup:',gc.mem_free())
         proof_box_web.start_web()
-        self.init_keypad_control()
+
         pass
 
     def on_manual_operation(self,op):
+        print('receive manual operation:',op)
         if(op==OPERATION_RESET):
             self.power_off()
             utime.sleep_ms(500)
@@ -112,7 +114,7 @@ class ProofBox():
     def init_power_control(self):
         self._power_on_pin=machine.Pin(int(CONFIG['power_control_pin']),machine.Pin.OUT)
         self.power_on()
-        _thread.start_new_thread(self.touch_control,())
+        # _thread.start_new_thread(self.touch_control,())
         MessageCenter.registe_message_callback(MSG_TYPE_MANUAL_OPERATION,self.on_manual_operation)
 
     def touch_control(self):

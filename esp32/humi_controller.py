@@ -11,7 +11,7 @@ class HumiController():
     def _slip_rate(self,curr_humi):
         if(curr_humi is None or curr_humi < 0.01):
             return 1.
-        if(self._last_humi is None):
+        if(self._last_humi is None or self._time is None):
             self._last_humi = curr_humi
             self._time=utime.time()
         elif(utime.time()-self._time>=60):
