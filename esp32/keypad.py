@@ -3,14 +3,14 @@ from machine import Pin
 import _thread
 import utime
 
-keys={'K1':34,'K2':35,'K3':27,'K4':12}
+keys={'K1':12 ,'K2':32,'K3':27,'K4':14}
 class Keypad():
     def __init__(self,keys=keys):
         print(keys)
         self._keys={}
         self._press_value=1
         for k,v in keys.items():
-            self._keys[k]=Pin(v,Pin.IN,Pin.PULL_DOWN)
+            self._keys[k]=Pin(v,Pin.IN,Pin.PULL_UP)
             self._press_value=not self._keys[k].value()
 
         print('default key value:',self._press_value)
