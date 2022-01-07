@@ -77,6 +77,8 @@ class ProofBox():
     def key_control(self,keys):
         if(keys is None):
             return
+        if(utime.time()-self.last_key_pressed_time<1 and keys==self.last_key_pressed):
+            return
         if(len(keys)>1):
             if('TEMP_UP' in keys and 'TEMP_DOWN' in keys):
                 MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_SWITCH_LIGHT)
@@ -112,6 +114,8 @@ class ProofBox():
               'HUMI_UP':int(CONFIG['humi_up_pin']),
               'HUMI_DOWN':int(CONFIG['humi_down_pin'])}
         self.keypad=keypad.Keypad(keys)
+        self.last_key_pressed_time=utime.time()
+        self.last_key_pressed=[]
         self.keypad.register_callback(self.key_control)
         self.keypad.start()
 

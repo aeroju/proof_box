@@ -109,7 +109,7 @@ class Matrix8x8:
 
     def _write_txt(self,txt):
         for i in range(self.num):
-            self._write(i,0xf)
+            self._write(i+1,0xf)
         pos=self.num
         for i in range(len(txt)):
             s = txt[i]
@@ -130,19 +130,19 @@ class Matrix8x8:
 
     def _flash(self,t):
         if(self._is_flash):
-            print('write content:',self.content_to_show)
+            # print('write content:',self.content_to_show)
             self._write_txt(self.content_to_show)
         else:
-            print('flash')
+            # print('flash')
             for i in range(self.num):
-                self._write(i,0xf)
+                self._write(i+1,0xf)
         self._is_flash = not self._is_flash
         if(utime.time()-self.flash_start_time>5):
-            print('flash end')
+            # print('flash end')
             t.deinit()
             self._write_txt(self.content_to_show)
 
-    def write_flash_txt(self,txt,interval=500):
+    def write_flash_txt(self,txt,interval=300):
         self.flash_timer.deinit()
         self._is_flash=False
         self.flash_start_time=utime.time()
