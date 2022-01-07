@@ -35,6 +35,7 @@ class HumiController():
 
     def run(self,curr_temp,curr_humi):
         slip_rate=self._slip_rate(curr_humi)
+        print('humi controller slip rate:',slip_rate)
         if(curr_humi>self.target_humi):
             if(slip_rate>-0.01):
                 self.humi_pin.off()
