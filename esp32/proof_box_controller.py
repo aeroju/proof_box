@@ -56,6 +56,8 @@ class ProofBoxController():
                 self._proof_status_lock.release()
 
     def on_manual_control(self,pm):
+        pm=int(pm)
+        print('proof box controller get manualy command:',pm)
         if(pm==OPERATION_BEGIN_POWER_DOWN):
             self.shutdown()
         elif(pm==OPERATION_SWITCH_LIGHT):
