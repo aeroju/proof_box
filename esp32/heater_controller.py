@@ -38,16 +38,21 @@ class HeaterController():
 
     def _linner_control(self,gap):
         if(gap>=8):
+            print('tempture gap>8, full speed heater on')
             self.heater1_controler.on()
             self.heater2_controler.on()
             self.low_header_control.on()
             self.heater1_pwm.duty(100)
+            self.status=3
         elif(gap>0 and gap<8):
+            print('tempture gap < 8, linner rate:',int(gap/8*100))
             self.heater2_controler.off()
             self.heater1_controler.on()
             self.heater1_pwm.duty(int(gap/8*100))
             self.low_header_control.on()
+            self.status=1
         else:
+            self.status=0
             self.stop_heating()
 
     def run(self,temp,humi):

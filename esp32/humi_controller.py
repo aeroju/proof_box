@@ -7,6 +7,7 @@ class HumiController():
         self._time=None
         self._last_humi=None
         self._target_humi = 75
+        self._status=False
 
     def _slip_rate(self,curr_humi):
         if(curr_humi is None or curr_humi < 0.01):
@@ -27,20 +28,29 @@ class HumiController():
     def target_humi(self,h):
         self._last_humi=h
 
+    @property
+    def status(self):
+        return self._status
+
     def run(self,curr_temp,curr_humi):
         slip_rate=self._slip_rate(curr_humi)
         if(curr_humi>self.target_humi):
             if(slip_rate>-0.01):
                 self.humi_pin.off()
+                self._status=False
             else:
                 self.humi_pin.on()
+                self._status=True
         else:
             if(slip_rate<0.01):
                 self.humi_pin.on()
+                self._status=True
             else:
                 self.humi_pin.off()
+                self._status=False
 
         pass
 
     def stop(self):
         self.humi_pin.off()
+        self._status=False

@@ -11,10 +11,11 @@ def read_config():
                 CONFIG[key.strip()] = val.strip()
     print('read config done.')
 
-def save_config():
-    with open(config_file,'w') as fh:
-        for k,v in CONFIG.items():
-            fh.write('{}={}\n'.format(k,v))
+def save_config(settings):
+    pass
+    # with open(config_file,'w') as fh:
+    #     for k,v in CONFIG.items():
+    #         fh.write('{}={}\n'.format(k,v))
 
 MSG_TYPE_INIT=0
 MSG_TYPE_STATUS=1

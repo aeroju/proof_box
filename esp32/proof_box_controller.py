@@ -215,7 +215,7 @@ class ProofBoxController():
         self.inner_fan_control()
         self.fan_control()
 
-        body={'temp':self.curr_temp,'humi':self.curr_humi,'is_heating':self.heater_control.status,'is_humi':self.is_humi,'is_fan':self.is_fan,'status':proof_material,'proof_time':self.proof_time}
+        body={'temp':self.curr_temp,'humi':self.curr_humi,'is_heating':self.heater_control.status,'is_humi':self.humi_controler.status,'is_fan':self.is_fan,'status':proof_material,'proof_time':self.proof_time}
         self.notify_message({'type':MSG_TYPE_STATUS,'value':body})
 
     def run(self,_stop_sign):

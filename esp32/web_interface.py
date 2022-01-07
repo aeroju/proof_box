@@ -47,7 +47,7 @@ class _Web_Interface():
 
     def on_manual_operation(self,op):
         print('send manual operation message:',op)
-        MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,op)
+        MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,int(op))
 
     def get_supported_material(self):
         return CONFIG['supported_materials']
