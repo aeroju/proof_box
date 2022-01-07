@@ -43,7 +43,7 @@ class ProofBox():
         self.controller.start()
         gc.collect()
         utime.sleep(2)
-        MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
+        MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,{'target_type':TARGET_JM})
         print('mem after controller startup:',gc.mem_free())
         proof_box_web.start_web()
 
