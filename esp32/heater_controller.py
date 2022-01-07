@@ -17,6 +17,7 @@ class HeaterController():
         return self._target_temp
     @target_temp.setter
     def target_temp(self,s):
+        print('heater controller get target tempture:',s)
         self._target_temp=s
 
     @property

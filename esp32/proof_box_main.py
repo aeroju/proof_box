@@ -83,20 +83,22 @@ class ProofBox():
             if('HUMI_UP' in keys and 'HUMI_DOWN' in keys):
                 MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_BEGIN_POWER_DOWN)
         else:
+            target_temp=self.controller.target_temp
+            target_humi=self.controller.target_humi
             if('TEMP_UP' in keys):
-                target_temp=self.controller.target_temp+1
+                target_temp=target_temp+1
                 if(target_temp>40):
                     target_temp=40
             elif('TEMP_DOWN' in keys):
-                target_temp=self.controller.target_temp-1
+                target_temp=target_temp-1
                 if(target_temp<0):
                     target_temp=0
             elif('HUMI_UP' in keys):
-                target_humi=self.controller.target_humi+1
+                target_humi=target_humi+1
                 if(target_humi>100):
                     target_humi=60
             elif('HUMI_DOWN' in keys):
-                target_humi=self.controller.target_humi-1
+                target_humi=target_humi-1
                 if(target_humi<60):
                     target_humi=100
             msg={'target_type':self.controller.status,'settings':{'target_temp':target_temp,'target_humi':target_humi}}

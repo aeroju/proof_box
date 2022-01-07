@@ -26,6 +26,7 @@ class HumiController():
 
     @target_humi.setter
     def target_humi(self,h):
+        print('humi controller get target humi:',h)
         self._last_humi=h
 
     @property
