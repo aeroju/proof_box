@@ -46,10 +46,11 @@ class HeaterController():
             self.heater1_pwm.duty(100)
             self.status=3
         elif(gap>0 and gap<8):
-            print('tempture gap < 8, linner rate:',int(gap/8*100))
+            r=int(gap/8*1000)
+            print('tempture gap < 8, linner rate:',r)
             self.heater2_controler.off()
             self.heater1_controler.on()
-            self.heater1_pwm.duty(int(gap/8*100))
+            self.heater1_pwm.duty(r)
             self.low_header_control.on()
             self.status=1
         else:

@@ -24,7 +24,7 @@ class LED_Interface():
             self.display.write_txt(txt)
 
     def display_setup(self,temp,humi):
-        txt='{:>2d}.0'.format(temp) + '.0' + \
+        txt='{:>2d}.0'.format(temp)  + \
             '  ' + \
             '{:>2d}.0'.format(humi)
         self.display.write_flash_txt(txt)
