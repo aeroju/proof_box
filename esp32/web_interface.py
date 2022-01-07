@@ -7,13 +7,16 @@ class _Web_Interface():
         self._lock = _thread.allocate_lock()
         self.__status={}
         MessageCenter.registe_message_callback(MSG_TYPE_CLIENT_STATUS,self.display_message)
-        MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.on_setting_change)
+        MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.on_change_settings)
         # self.on_setting_change()
 
-    def on_setting_change(self):
-        self.target_temp=CONFIG[SETTINGS_TARGET_TEMP]
-        self.target_humi=CONFIG[SETTINGS_TARGET_HUMI]
-        # self.proof_material=CONFIG['proof_material']
+    def on_change_settings(self,msg):
+        target_type=TARGET_JM if msg.get('target_type') is None else msg.get('target_type')
+        settings=JM_SETTING if msg.get('settings') is None else msg.get('settings')
+        self.status=target_type
+        self.target_temp=settings['target_temp']
+        self.target_humi=settings['target_humi']
+
 
     def display_message(self,msg):
         if(msg['type'] in (MSG_TYPE_INIT,MSG_TYPE_START,MSG_TYPE_STOP,MSG_TYPE_ERROR)):
