@@ -17,7 +17,6 @@ class HeaterController():
         return self._target_temp
     @target_temp.setter
     def target_temp(self,s):
-        print('heater controller get target tempture:',s)
         self._target_temp=s
 
     @property
@@ -47,6 +46,7 @@ class HeaterController():
             self.status=3
         elif(gap>0 and gap<8):
             r=int(gap/8*1000)
+            r=r if r>100 else 0
             print('tempture gap < 8, linner rate:',r)
             self.heater2_controler.off()
             self.heater1_controler.on()

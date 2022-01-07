@@ -64,7 +64,9 @@ class ProofBoxController():
             self.switch_light()
 
     def on_change_settings(self,msg):
-        target_type=TARGET_JM if msg.get('target_type') is None else msg.get('target_type')
+        target_type=self.status if msg.get('target_type') is None else msg.get('target_type')
+        if(target_type==-1):
+            target_type=TARGET_JM
         settings=JM_SETTING if msg.get('settings') is None else msg.get('settings')
         self.status=target_type
         self.init_settings(settings)
@@ -206,7 +208,7 @@ class ProofBoxController():
         self.invert_inner_fan()
 
     def switch_light(self):
-        self.light_status=not self._light_status
+        self._light_status=not self._light_status
         self.inner_light_pin.value(self._light_status)
 
     def proof_control(self,proof_material):

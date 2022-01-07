@@ -103,7 +103,7 @@ class ProofBox():
                 target_humi=target_humi-1
                 if(target_humi<60):
                     target_humi=100
-            msg={'target_type':self.controller.status,'settings':{'target_temp':target_temp,'target_humi':target_humi}}
+            msg={'settings':{'target_temp':target_temp,'target_humi':target_humi}}
             MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,msg)
             self.led_interface.display_setup(target_temp,target_humi)
 

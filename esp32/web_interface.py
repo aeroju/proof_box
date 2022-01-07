@@ -6,12 +6,16 @@ class _Web_Interface():
     def __init__(self):
         self._lock = _thread.allocate_lock()
         self.__status={}
+        self.status=-1
         MessageCenter.registe_message_callback(MSG_TYPE_CLIENT_STATUS,self.display_message)
         MessageCenter.registe_message_callback(MSG_TYPE_CHANGE_SETTINGS,self.on_change_settings)
         # self.on_setting_change()
 
     def on_change_settings(self,msg):
-        target_type=TARGET_JM if msg.get('target_type') is None else msg.get('target_type')
+        print('web interface get seting change message',msg)
+        target_type=self.status if msg.get('target_type') is None else msg.get('target_type')
+        if(target_type==-1):
+            target_type=TARGET_JM
         settings=JM_SETTING if msg.get('settings') is None else msg.get('settings')
         self.status=target_type
         self.target_temp=settings['target_temp']
@@ -37,10 +41,16 @@ class _Web_Interface():
         return None
 
     def update_settings(self,settings):
+        target_temp=self.target_temp
+        target_humi=self.target_humi
         for k,v in settings.items():
-            CONFIG[k]=int(v)
-        self.on_setting_change()
-        MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,None)
+            if(k=='target_temp'):
+                target_temp=int(v)
+            elif(k=='target_humi'):
+                target_humi=int(v)
+
+        msg={'settings':{'target_temp':target_temp,'target_humi':target_humi}}
+        MessageCenter.notify(MSG_TYPE_CHANGE_SETTINGS,msg)
 
     def on_operation(self,operation):
         MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,int(operation))
