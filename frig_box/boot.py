@@ -9,9 +9,16 @@ webrepl.start()
 import wifi
 wifi.wlan_connect()
 
-import main
-main.Controller().run()
+import uos
+def cat(fn):
+    with open(fn,'r') as fh:
+        print(''.join(fh.readlines()))
 
+# import main
+# main.Controller().run()
+
+# import measure_and_sleep
+# measure_and_sleep.Main().run()
 
 
 # import dht

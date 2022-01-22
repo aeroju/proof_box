@@ -37,8 +37,10 @@ _SCANLIMIT = const(11)
 _SHUTDOWN = const(12)
 _DISPLAYTEST = const(15)
 
+CHARS={'0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'-':10,'E':11,'H':12,'L':13,'P':14,' ':15}
+
 class Matrix8x8:
-    def __init__(self, spi, cs, num):
+    def __init__(self, spi, cs, num, flash_timer):
 
         self.spi = spi
         self.cs = cs
@@ -58,8 +60,9 @@ class Matrix8x8:
         self.scroll = fb.scroll  # (dx, dy)
         self.blit = fb.blit  # (fbuf, x, y[, key])
         self.init()
-        self.flash_timer=Timer(31)
+        self.flash_timer=flash_timer
         self.content=[' ']*self.num
+        self.on_flash=False
 
     # def _write(self, command, data):
     #     self.cs(0)
@@ -105,8 +108,9 @@ class Matrix8x8:
             self.cs(1)
 
     def write_txt(self,txt):
-        self.flash_timer.deinit()
-        self._write_txt(txt)
+        if(not self.on_flash):
+            self.flash_timer.deinit()
+            self._write_txt(txt)
 
     def _write_txt(self,txt):
         # for i in range(self.num):
@@ -116,18 +120,12 @@ class Matrix8x8:
             s = txt[i]
             if(pos<=0):
                 break
-            k=0xf
-            if(s in ['1','2','3','4','5','6','7','8','9','0']):
-                k=int(s)
-                if(i+1<len(txt)-1):
-                    if(txt[i+1]=='.'):
-                        k=0x80|k
-            elif(s==' '):
-                k=0xf
-            elif(s=='-'):
-                k=10
-            else:
+            k=CHARS.get(s)
+            if(k is None):
                 continue
+            if(i+1<len(txt)-1):
+                if(txt[i+1]=='.'):
+                    k=0x80|k
             if(self.content[pos-1]!=k):
                 self._write(pos,k)
                 self.content[pos-1]=k
@@ -137,16 +135,17 @@ class Matrix8x8:
         if(self._is_flash):
             self._write_txt(self.content_to_show)
         else:
-            for i in range(self.num):
-                self._write(i+1,0xf)
+            self._write_txt('        ')
         self._is_flash = not self._is_flash
         if(utime.time()-self.flash_start_time>5):
             t.deinit()
+            self.on_flash=False
             self._write_txt(self.content_to_show)
 
     def write_flash_txt(self,txt,interval=300):
         self.flash_timer.deinit()
         self._is_flash=False
+        self.on_flash=True
         self.flash_start_time=utime.time()
         self.content_to_show=txt
         self.flash_timer.init(mode=Timer.PERIODIC, period=interval, callback=self._flash)

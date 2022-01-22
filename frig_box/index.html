@@ -1,0 +1,328 @@
+<!--
+    THIS EXAMPLE WAS DOWNLOADED FROM https://echarts.apache.org/examples/zh/editor.html?c=dynamic-data2
+-->
+<!DOCTYPE html>
+<html style="height: 100%">
+    <head>
+        <title>My Proofing Box</title>
+        <meta charset="utf-8">
+    </head>
+    <body style="height: 100%; margin: 0">
+        <div id="status_div" style="width:80%;height:100" align="center">
+            <table>
+                <tr> <td height="30"></td></tr>
+
+                <tr>
+                    <td> <span lang=ZH-CN style="border-bottom: 1px solid #dddddd  font-size:12.0pt;bold;font-family:宋体;Calibri"><b>系统状态</b></span>：</td>
+                    <td><span id="curr_status">xx</span>
+                        <input ID="light" type="button" onclick="on_manual_op(40)" value="开灯/关灯">
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <table width="100%">
+                            <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
+                                <td style="border-bottom: 1px solid #dddddd">温度:</td> <td width="30" align="right"  id="curr_temp" >T</td>
+                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">设定值：(
+                                    <input type="number" id="target_temp" style="width:50px" onchange="on_temp_setup()" value="28">
+                                    )
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
+                                <td style="border-bottom: 1px solid #dddddd">湿度: </td> <td width="30" align="right" id="curr_humi"> H </td>
+                                <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">设定值：(
+                                    <input type="number" id="target_humi" style="width:50px" onchange="on_humi_setup()" value="80">
+                                    )
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr> <td height="30"></td></tr>
+
+                <tr>
+                    <td style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri"><b>各功能状态:</b></td>
+                </tr>
+                <tr>
+                    <td>
+                        <table width="300">
+                            <tr>
+                                <td width="100">加热：</td><td width="30"><span id="is_heating"></span></td>
+                                <td width="100">制冷：</td><td width="30"><span id="is_frig"></span></td>
+                                <td width="100">加湿：</td><td width="30"><span id="is_humi"></span></td>
+                                <td width="100">排风：</td><td width="30"><span id="is_fan"></span></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+            </table>
+
+
+        </div>
+        <div id="container" style="width:80%;height:80%" align="center">
+
+
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
+
+        <script type="text/javascript">
+var dom = document.getElementById("container");
+var myChart = echarts.init(dom);
+var app = {};
+
+var option;
+
+var low_temp_his = [];
+var low_humi_his = [];
+var high_temp_his = [];
+var high_humi_his = [];
+var now = +new Date(1997, 9, 3);
+var oneDay = 24 * 3600 * 1000;
+option = {
+    title: {
+        text: '温湿度记录'
+    },
+    tooltip: {
+        trigger: 'axis',
+<!--        formatter: function (params) {-->
+<!--            params = params[0];-->
+<!--            var date = new Date(params.name);-->
+<!--            return date.getDate() + '/' + (date.getMonth() + 1) + '/' + date.getFullYear() + ' : ' + params.value[1];-->
+<!--        },-->
+        axisPointer: {
+            animation: false
+        }
+    },
+    xAxis: {
+        type: 'time',
+        splitLine: {
+            show: true
+        }
+    },
+    yAxis: {
+        type: 'value',
+        boundaryGap: ['0%', '0%'],
+        splitLine: {
+            show: true
+        }
+    },
+    series: [{
+        name: '温度(下)',
+        type: 'line',
+        label:{
+            show:true,
+            position:'top',
+            formatter:'{a}:{c}',
+            },
+        lineStyle:{
+            color:#ff0000
+            },
+        showSymbol: false,
+        hoverAnimation: false,
+        data: temp_his,
+        markLine:{
+            data:[{yAxis: 20}
+<!--            ,{yAxis: 30}-->
+            ]
+        }
+    },{
+        name: '湿度下',
+        type: 'line',
+        label:{
+            show:true,
+            position:'top',
+            formatter:'{a}:{c}',
+            },
+        lineStyle:{
+            color:#00ff00
+            },
+        showSymbol: false,
+        hoverAnimation: false,
+        data: humi_his,
+        markLine:{
+            data:[{yAxis: 60}
+<!--            ,{yAxis: 80}-->
+            ]
+        }
+    },{
+        name: '温度(上)',
+        type: 'line',
+        label:{
+            show:true,
+            position:'top',
+            formatter:'{a}:{c}',
+            },
+        lineStyle:{
+            color:#aa0000
+            },
+        showSymbol: false,
+        hoverAnimation: false,
+        data: temp_his,
+        markLine:{
+            data:[{yAxis: 20}
+<!--            ,{yAxis: 30}-->
+            ]
+        }
+    },{
+        name: '湿度上',
+        type: 'line',
+        label:{
+            show:true,
+            position:'top',
+            formatter:'{a}:{c}',
+            },
+        lineStyle:{
+            color:#00aa00
+            },
+        showSymbol: false,
+        hoverAnimation: false,
+        data: humi_his,
+        markLine:{
+            data:[{yAxis: 60}
+<!--            ,{yAxis: 80}-->
+            ]
+        }
+    }
+    ]
+};
+if (option && typeof option === 'object') {
+    myChart.setOption(option);
+}
+
+var server = window.location.host;
+function init_page(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/his",
+        dataType: "text",
+        success: function (data) {
+            var lines = data.split("\n")
+            for(var i=0;i<lines.length;i++){
+                var line=lines[i].split("^");
+                if(line.length==5){
+                    low_temp_his.push({name:line[0],
+                        value:[line[0],line[1]]})
+                    low_humi_his.push({name:line[0],
+                        value:[line[0],line[2]]})
+                    high_temp_his.push({name:line[0],
+                        value:[line[0],line[3]]})
+                    high_humi_his.push({name:line[0],
+                        value:[line[0],line[4]]})
+                }
+            }
+            get_settings()
+            get_status()
+        }
+    });
+}
+
+function set_settings(settings){
+    $("#target_temp").val(settings.target_temp);
+    $("#target_humi").val(settings.target_humi);
+    option.series[0].markLine["data"][0]={yAxis:settings.target_temp}
+    option.series[1].markLine["data"][0]={yAxis:settings.target_humi}
+    myChart.setOption(option)
+}
+function get_settings(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_settings",
+        dataType: "json",
+        success: function (result) {
+            set_settings(result.settings)
+        }
+    });
+}
+
+function on_temp_setup(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/operate?op=",
+        dataType: "text",
+        success:function(data){
+            get_settings()
+        }
+    })
+}
+function on_humi_setup(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/change_settings?target_humi="+$("#target_humi").val(),
+        dataType: "text",
+        success:function(data){
+            get_settings()
+        }
+    })
+}
+
+function from_sec_to_str(s){
+    var h = Math.floor(s/3600);
+    var m = Math.floor((s-h*3600)/60);
+    var sl = s-h*3600-m*60;
+    var ret="";
+    if(h>0){
+        ret=ret+h+"小时" + m + "分";
+    }else{
+        if(m>0){
+            ret = ret + m + "分";
+        }
+    }
+    ret = ret + sl + "秒";
+    return ret;
+}
+function get_status(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/get_status",
+        dataType: "json",
+        success: function (result) {
+            $("#curr_temp").html('上:'+result.t1 + '/下:'+result.t2);
+            $("#curr_humi").html('上:'+result.h1 + '/下:'+result.h2);
+            document.title='发酵箱('+result.t1 + '/' + result.t2 + ',' + result.h1 + '/' + result.h2 + ')';
+            $("#curr_status").text("工作中：" + from_sec_to_str(result.bt));
+            $("#is_heating").text(result.Heater)
+            $("#is_humi").text(result.Humi)
+            $("#is_fan").text(result.Fan)
+            $("#is_frig").text(result.Frig)
+
+            var curr_time = result.t
+            if(low_temp_his.length==0 || curr_time!=low_temp_his[low_temp_his.length-1].name){
+                low_temp_his.push({name:curr_time,value:[curr_time,result.t1]})
+                low_humi_his.push({name:curr_time,value:[curr_time,result.h1]})
+                high_temp_his.push({name:curr_time,value:[curr_time,result.t1]})
+                high_humi_his.push({name:curr_time,value:[curr_time,result.h1]})
+                myChart.setOption({
+                    series: [
+                    {data: low_temp_his},
+                    {data: low_humi_his},
+                    {data: high_temp_his},
+                    {data: high_humi_his}
+                    ]
+                });
+            }
+
+            $("#target_temp").val(result.tt);
+            $("#target_humi").val(result.th);
+            option.series[0].markLine["data"][0]={result.tt}
+            option.series[1].markLine["data"][0]={result.th}
+            myChart.setOption(option)
+
+
+        }
+    });
+}
+
+
+window.onload=function(){
+    init_page()
+    setInterval(function () {
+        get_status()
+        }, 10000
+    );
+}
+
+        </script>
+    </body>
+</html>
+    
