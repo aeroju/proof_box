@@ -9,8 +9,8 @@ webrepl.start()
 import wifi
 wifi.wlan_connect()
 
-import proof_box_main
-proof_box_main.ProofBox()
+# import proof_box_main
+# proof_box_main.ProofBox()
 #
 # from keypad import Keypad
 # k=Keypad()

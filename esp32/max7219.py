@@ -37,6 +37,8 @@ _SCANLIMIT = const(11)
 _SHUTDOWN = const(12)
 _DISPLAYTEST = const(15)
 
+CHARS={'0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'-':10,'E':11,'H':12,'L':13,'P':14,' ':15}
+
 class Matrix8x8:
     def __init__(self, spi, cs, num):
 
@@ -59,6 +61,7 @@ class Matrix8x8:
         self.blit = fb.blit  # (fbuf, x, y[, key])
         self.init()
         self.flash_timer=Timer(31)
+        self.content=[' ']*self.num
 
     # def _write(self, command, data):
     #     self.cs(0)
@@ -70,15 +73,15 @@ class Matrix8x8:
         self.spi.write(bytearray([command,data]))
         self.cs(1)
 
-    # def init(self):
-    #     for command, data in (
-    #             (_SHUTDOWN, 0),
-    #             (_DISPLAYTEST, 0),
-    #             (_SCANLIMIT, 7),
-    #             (_DECODEMODE, 0),
-    #             (_SHUTDOWN, 1),
-    #     ):
-    #         self._write(command, data)
+    def init2(self):
+        for command, data in (
+                (_SHUTDOWN, 0),
+                (_DISPLAYTEST, 0),
+                (_SCANLIMIT, 7),
+                (_DECODEMODE, 0),
+                (_SHUTDOWN, 1),
+        ):
+            self._write(command, data)
     def init(self):
         for command,data in (
                 (0x09,0xff), #decode mode BCD
@@ -108,37 +111,32 @@ class Matrix8x8:
         self._write_txt(txt)
 
     def _write_txt(self,txt):
-        for i in range(self.num):
-            self._write(i+1,0xf)
+        # for i in range(self.num):
+        #     self._write(i+1,0xf)
         pos=self.num
         for i in range(len(txt)):
             s = txt[i]
             if(pos<=0):
                 break
-            if(s in ['1','2','3','4','5','6','7','8','9','0']):
-                k=int(s)
-                if(i+1<len(txt)-1):
-                    if(txt[i+1]=='.'):
-                        k=0x80|k
+            k=CHARS.get(s)
+            if(k is None):
+                continue
+            if(i+1<len(txt)-1):
+                if(txt[i+1]=='.'):
+                    k=0x80|k
+            if(self.content[pos-1]!=k):
                 self._write(pos,k)
-                pos-=1
-            elif(s==' '):
-                self._write(pos,0xf)
-                pos-=1
-            else:
-                pass
+                self.content[pos-1]=k
+            pos-=1
 
     def _flash(self,t):
         if(self._is_flash):
-            # print('write content:',self.content_to_show)
             self._write_txt(self.content_to_show)
         else:
-            # print('flash')
             for i in range(self.num):
                 self._write(i+1,0xf)
         self._is_flash = not self._is_flash
         if(utime.time()-self.flash_start_time>5):
-            # print('flash end')
             t.deinit()
             self._write_txt(self.content_to_show)
 

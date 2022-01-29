@@ -27,7 +27,7 @@ SOFTWARE.
 from micropython import const
 import framebuf
 import utime
-from machine import Timer
+from machine import Timer,Pin,SPI
 
 _NOOP = const(0)
 _DIGIT0 = const(1)
@@ -37,55 +37,59 @@ _SCANLIMIT = const(11)
 _SHUTDOWN = const(12)
 _DISPLAYTEST = const(15)
 
-CHARS={'0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'-':10,'E':11,'H':12,'L':13,'P':14,' ':15}
+CHARS={  '0':0b01111110
+        ,'1':0b00110000
+        ,'2':0b01101101
+        ,'3':0b01111001
+        ,'4':0b00110011
+        ,'5':0b01011011
+        ,'6':0b01011111
+        ,'7':0b01110000
+        ,'8':0b01111111
+        ,'9':0b01111011
+        ,'-':0b00000001
+        ,'E':0b01001111
+        ,'H':0b00110111
+        ,'L':0b00001110
+        ,'P':0b01100111
+        ,' ':0b0
+        ,'C':0b01001110
+        ,'O':0b01111110
+        ,'R':0b00100111
+        ,'T':0b00001111
+        ,'A':0b01110111
+        ,'S':0b01011011
+        ,'N':0b01110110
+        ,'U':0b00111110
+        ,'B':0b00011111
+        ,'M':0b00010101
+        ,'F':0b01000111
+       }
+
 
 class Matrix8x8:
-    def __init__(self, spi, cs, num, flash_timer):
+    def __init__(self, sck,mosi, cs, num, flash_timer):
 
-        self.spi = spi
-        self.cs = cs
-        self.cs.init(cs.OUT, True)
-        self.buffer = bytearray(8 * num)
+        self.spi = SPI(1,baudrate=10000000, polarity=1, phase=0,
+                       sck=Pin(sck),
+                       mosi=Pin(mosi))
+        self.cs = Pin(cs)
+        self.cs.init(self.cs.OUT, True)
         self.num = num
-        fb = framebuf.FrameBuffer(self.buffer, 8 * num, 8, framebuf.MONO_HLSB)
-        self.framebuf = fb
-        self.fill = fb.fill  # (col)
-        self.pixel = fb.pixel # (x, y[, c])
-        self.hline = fb.hline  # (x, y, w, col)
-        self.vline = fb.vline  # (x, y, h, col)
-        self.line = fb.line  # (x1, y1, x2, y2, col)
-        self.rect = fb.rect  # (x, y, w, h, col)
-        self.fill_rect = fb.fill_rect  # (x, y, w, h, col)
-        self.text = fb.text  # (string, x, y, col=1)
-        self.scroll = fb.scroll  # (dx, dy)
-        self.blit = fb.blit  # (fbuf, x, y[, key])
         self.init()
         self.flash_timer=flash_timer
         self.content=[' ']*self.num
         self.on_flash=False
+        self.internal_cnt=utime.time()
 
-    # def _write(self, command, data):
-    #     self.cs(0)
-    #     for m in range(self.num):
-    #         self.spi.write(bytearray([command, data]))
-    #     self.cs(1)
     def _write(self,command,data):
         self.cs(0)
         self.spi.write(bytearray([command,data]))
         self.cs(1)
 
-    def init2(self):
-        for command, data in (
-                (_SHUTDOWN, 0),
-                (_DISPLAYTEST, 0),
-                (_SCANLIMIT, 7),
-                (_DECODEMODE, 0),
-                (_SHUTDOWN, 1),
-        ):
-            self._write(command, data)
     def init(self):
         for command,data in (
-                (0x09,0xff), #decode mode BCD
+                (0x09,0x00), #decode mode BCD
                 (0x0a, 0x03), # brightness=3
                 (0x0b,0x07), #scan limit=7
                 (0x0c, 0x01),# drop mode=1
@@ -95,19 +99,16 @@ class Matrix8x8:
         utime.sleep(1)
         self._write(0x0f,0x00)
 
-    def brightness(self, value):
-        if not 0 <= value <= 15:
-            raise ValueError("Brightness out of range")
-        self._write(_INTENSITY, value)
-
-    def show(self):
-        for y in range(8):
-            self.cs(0)
-            for m in range(self.num):
-                self.spi.write(bytearray([_DIGIT0 + y, self.buffer[(y * self.num) + m]]))
-            self.cs(1)
+    def brightness(self,val):
+        val=0x0 if val<=0 else val if val<=0xf else 0xf
+        self._write(0x0a, val)
 
     def write_txt(self,txt):
+        if(utime.time()-self.internal_cnt>60):
+            self._write(0x0f,0x01)
+            utime.sleep_ms(100)
+            self._write(0x0f,0x00)
+            self.internal_cnt=utime.time()
         if(not self.on_flash):
             self.flash_timer.deinit()
             self._write_txt(txt)
@@ -142,11 +143,21 @@ class Matrix8x8:
             self.on_flash=False
             self._write_txt(self.content_to_show)
 
-    def write_flash_txt(self,txt,interval=300):
+    def write_flash_txt(self,txt,interval=400):
         self.flash_timer.deinit()
         self._is_flash=False
         self.on_flash=True
         self.flash_start_time=utime.time()
         self.content_to_show=txt
         self.flash_timer.init(mode=Timer.PERIODIC, period=interval, callback=self._flash)
+
+    def write_rowing_txt(self,txt,interval=400):
+        self.flash_timer.deinit()
+        if(txt is not None and len(txt)>0):
+            bb=''.join([' ' for _ in range(self.num+1)])
+            txt=''.join([bb,txt,bb])
+            for i in range(self.num + 1):
+                t=txt[i:self.num+i]
+                self._write_txt(t)
+                utime.sleep_ms(interval)
 

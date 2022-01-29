@@ -1,4 +1,4 @@
-from machine import Pin,PWM
+from machine import Pin,PWM,Timer
 import utime
 
 class PwmSetting():
@@ -54,14 +54,12 @@ class Controler():
         return t1,t2
 
     def _get_temp(self,msg):
-        t1,t2=msg.get('t1'),msg.get('t2')
-        return self._check_data(t1,t2)
+        return self._check_data(msg.get('t1'),msg.get('t2'))
 
     def _get_humi(self,msg):
-        t1,t2=msg.get('h1'),msg.get('h2')
-        return self._check_data(t1,t2)
+        return self._check_data(msg.get('h1'),msg.get('h2'))
 
-    async def run(self,msg,target):
+    def run(self,msg,target):
         pass
 
     def test(self):
@@ -85,8 +83,6 @@ class FanControl(Controler):
         self.max_gap=2
         self.min_gap=0.5
         self._speed=None
-        self.duty_rates=[self.fan.min_duty]
-
 
     @property
     def status(self):
@@ -96,13 +92,13 @@ class FanControl(Controler):
     def name(self):
         return 'Fan'
 
-    async def run(self,msg,target):
+    def run(self,msg,target):
         t1,t2=self._get_temp(msg)
         if(t1 is None and t2 is None):
             return
-        d=self._duty_rate(t1,t2)
+        # d=self._duty_rate(t1,t2)
+        d=1023
         self._speed=d
-        print('Fan Duty:',d)
         if(d is not None):
             self.pwm.duty(d)
 
@@ -129,11 +125,12 @@ class FanControl(Controler):
 
 
 class FrigControl(Controler):
-    def __init__(self,pin:Pin):
+    def __init__(self,pin:Pin,stop_timer:Timer):
         super().__init__(pin,None)
         self.last_start=0
         self.last_stop=0
         self.tolerance=2
+        self.stop_timer=stop_timer
 
     @property
     def status(self):
@@ -151,27 +148,41 @@ class FrigControl(Controler):
             print('{} seconds after last stop, wait'.format(ut-self.last_stop))
             return
         if(self.pin.value()==0):
+            print('frig start running')
             self.last_start=ut
             self.pin.on()
+            self.stop_timer.deinit()
         return
+
+    def _timer_callback(self,t):
+        t.deinit()
+        self.stop()
 
     def stop(self):
         ut=utime.time()
         #如果距离上次启动时间小于5分钟，则继续运行
+        print('running time of frig:{} secs'.format(ut-self.last_start))
         if(ut-self.last_start<5*60):
-            print('{} seconds after last start, wait'.format(ut-self.last_start))
+            to_st=5*60+10-(ut-self.last_start)
+            print('{} secs after last start, stop timer setup for {} secs'.format(ut-self.last_start,to_st))
+            self.stop_timer.deinit()
+            self.stop_timer.init(mode=Timer.ONE_SHOT, period=to_st*1000, callback=self._timer_callback)
             return
         if(self.pin.value()==1):
             self.last_stop=ut
             self.pin.off()
 
-    async def run(self,msg,target):
+    def run(self,msg,target):
+        mode=target[2]
+        if(mode !='COOLER'):
+            return
         target = target[0]
         if(target>10):
             self.stop()
             return
         t1,t2=self._get_temp(msg)
         if(t1 is None and t2 is None):
+            self.stop()
             return
         ave_tmp,min_tmp,max_tmp=(t1+t2)/2,min(t1,t2),max(t1,t2)
         if(ave_tmp < target-self.tolerance):
@@ -188,7 +199,7 @@ class FrigControl(Controler):
         utime.sleep_ms(100)
         assert self.pin.value()==1
 
-heater_tolerance=[10, 8, 0]  #startup value, full power value gap, stop gap
+heater_tolerance=[None, 1, 0]  #startup value, full power value gap, stop gap
 humi_tolerance=[None,5,-1]
 
 class HeaterControl(Controler):
@@ -232,6 +243,7 @@ class HeaterControl(Controler):
 
     def _run(self,t1,t2,target):
         if(t1 is None and t2 is None):
+            self.stop()
             return
         if(self.tolerance[0] is not None and target<self.tolerance[0]):
             self.stop()
@@ -244,7 +256,9 @@ class HeaterControl(Controler):
         else:
             self.linner(ave_tmp,target)
 
-    async def run(self,msg,target):
+    def run(self,msg,target):
+        if(target[2] !='HEATER'):
+            return
         t1,t2 = self._get_temp(msg)
         target=target[0]
         if(target is None):
@@ -259,7 +273,9 @@ class HumiControl(HeaterControl):
     def name(self):
         return 'Humi'
 
-    async def run(self,msg,target):
+    def run(self,msg,target):
+        if(target[2] !='HEATER'):
+            return
         t1,t2=self._get_humi(msg)
         target = target[1]
         if(target is None):
@@ -280,7 +296,7 @@ class LightControl(Controler):
     def name(self):
         return 'Light'
 
-    async def run(self,msg,target):
+    def run(self,msg,target):
         pass
 
     def switch(self):

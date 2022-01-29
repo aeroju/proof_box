@@ -79,6 +79,8 @@ class ProofBox():
             return
         if(utime.time()-self.last_key_pressed_time<1 and keys==self.last_key_pressed):
             return
+        self.last_key_pressed_time=utime.time()
+        self.last_key_pressed=keys
         if(len(keys)>1):
             if('TEMP_UP' in keys and 'TEMP_DOWN' in keys):
                 MessageCenter.notify(MSG_TYPE_MANUAL_OPERATION,OPERATION_SWITCH_LIGHT)

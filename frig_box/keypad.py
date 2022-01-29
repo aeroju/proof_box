@@ -27,20 +27,29 @@ class Keypad():
             keys=self._keys
         if(press_value is None):
             press_value=self._press_value
-        _pks=[]
+        _c_pks=[]
+        _l_pks=[]
         while(True):
             for k,v in keys.items():
                 if(v.value()==press_value):
-                    _pks.append(k)
-            if( len(_pks)>0):
-                print('key pressed:',_pks)
-                for c in self._callbacks:
-                    c(_pks)
-            _pks.clear()
-            utime.sleep_ms(200)
+                    _c_pks.append(k)
+            if( len(_c_pks)>0):
+                _l_pks.clear()
+                _l_pks.extend(_c_pks)
+            else:
+                if(len(_l_pks)>0):
+                    print('key pressed:',_l_pks)
+                    for c in self._callbacks:
+                        c(_l_pks)
+                    _l_pks.clear()
+            _c_pks.clear()
+            await uasyncio.sleep_ms(200)
 
     def start(self):
         _thread.start_new_thread(self.run,(self._keys,self._press_value))
+
+    def start_task(self,loop):
+        loop.create_task(self.run())
 
 
 

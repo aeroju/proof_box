@@ -10,47 +10,50 @@
     <body style="height: 100%; margin: 0">
         <div id="status_div" style="width:80%;height:100" align="center">
             <table>
-                <tr> <td height="30"></td></tr>
-
                 <tr>
                     <td> <span lang=ZH-CN style="border-bottom: 1px solid #dddddd  font-size:12.0pt;bold;font-family:宋体;Calibri"><b>系统状态</b></span>：</td>
-                    <td><span id="curr_status">xx</span>
-                        <input ID="light" type="button" onclick="on_manual_op(40)" value="开灯/关灯">
+                    <td><select id="op_mode" style="visibility:hidden" onchange="on_switch_mode()"><option value="HEATER">发酵</option><option value="COOLER" selected>冷藏</option></select>
+                        <span id="curr_status" style="visibility:hidden">xx</span>
+                        <input ID="light" type="button" onclick="on_switch_light()" value="开灯/关灯" style="visibility:hidden">
+                        <input ID="startup" type="button" onclick="on_startup()" value="启动" style="visibility:hidden">
+                        <input ID="shutdown" type="button" onclick="on_shutdown()" value="关机" style="visibility:hidden">
                     </td>
                 </tr>
                 <tr>
-                    <td>
+                    <td colspan="2">
                         <table width="100%">
                             <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
                                 <td style="border-bottom: 1px solid #dddddd">温度:</td> <td width="30" align="right"  id="curr_temp" >T</td>
                                 <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">设定值：(
-                                    <input type="number" id="target_temp" style="width:50px" onchange="on_temp_setup()" value="28">
+                                    <input type="number" id="target_temp" style="width:50px" onchange="" value="28"/>
+                                    <input type="button" value="设置" onclick="on_temp_setup()"/>
                                     )
                                 </td>
                             </tr>
                             <tr style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri">
                                 <td style="border-bottom: 1px solid #dddddd">湿度: </td> <td width="30" align="right" id="curr_humi"> H </td>
                                 <td style="border-bottom: 1px solid #dddddd;padding:10px 50px">设定值：(
-                                    <input type="number" id="target_humi" style="width:50px" onchange="on_humi_setup()" value="80">
+                                    <input type="number" id="target_humi" style="width:50px" onchange="" value="80"/>
+                                    <input type="button" id='btn_humi' value="设置" onclick="on_humi_setup()"/>
                                     )
                                 </td>
                             </tr>
                         </table>
                     </td>
                 </tr>
-                <tr> <td height="30"></td></tr>
+                <tr> <td height="30" colspan="2"></td></tr>
 
                 <tr>
-                    <td style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri"><b>各功能状态:</b></td>
+                    <td style="border-bottom: 1px solid #dddddd  font-size:12.0pt;font-family:宋体;Calibri" colspan="2"><b>各功能状态:</b></td>
                 </tr>
                 <tr>
-                    <td>
-                        <table width="300">
+                    <td colspan="2">
+                        <table >
                             <tr>
                                 <td width="100">加热：</td><td width="30"><span id="is_heating"></span></td>
                                 <td width="100">制冷：</td><td width="30"><span id="is_frig"></span></td>
                                 <td width="100">加湿：</td><td width="30"><span id="is_humi"></span></td>
-                                <td width="100">排风：</td><td width="30"><span id="is_fan"></span></td>
+                                <td width="100">风扇：</td><td width="30"><span id="is_fan"></span></td>
                             </tr>
                         </table>
                     </td>
@@ -61,6 +64,7 @@
 
         </div>
         <div id="container" style="width:80%;height:80%" align="center">
+        </div>
 
 
         <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
@@ -116,11 +120,11 @@ option = {
             formatter:'{a}:{c}',
             },
         lineStyle:{
-            color:#ff0000
+            color:'#ff0000'
             },
         showSymbol: false,
         hoverAnimation: false,
-        data: temp_his,
+        data: low_temp_his,
         markLine:{
             data:[{yAxis: 20}
 <!--            ,{yAxis: 30}-->
@@ -135,11 +139,11 @@ option = {
             formatter:'{a}:{c}',
             },
         lineStyle:{
-            color:#00ff00
+            color:'#00ff00'
             },
         showSymbol: false,
         hoverAnimation: false,
-        data: humi_his,
+        data: low_humi_his,
         markLine:{
             data:[{yAxis: 60}
 <!--            ,{yAxis: 80}-->
@@ -154,14 +158,13 @@ option = {
             formatter:'{a}:{c}',
             },
         lineStyle:{
-            color:#aa0000
+            color:'#aa0000'
             },
         showSymbol: false,
         hoverAnimation: false,
-        data: temp_his,
+        data: high_temp_his,
         markLine:{
             data:[{yAxis: 20}
-<!--            ,{yAxis: 30}-->
             ]
         }
     },{
@@ -173,14 +176,13 @@ option = {
             formatter:'{a}:{c}',
             },
         lineStyle:{
-            color:#00aa00
+            color:'#00aa00'
             },
         showSymbol: false,
         hoverAnimation: false,
-        data: humi_his,
+        data: high_humi_his,
         markLine:{
             data:[{yAxis: 60}
-<!--            ,{yAxis: 80}-->
             ]
         }
     }
@@ -211,7 +213,6 @@ function init_page(){
                         value:[line[0],line[4]]})
                 }
             }
-            get_settings()
             get_status()
         }
     });
@@ -238,20 +239,83 @@ function get_settings(){
 function on_temp_setup(){
     $.ajax({
         type: "GET",
-        url:"http://" + server + "/operate?op=",
+        url:"http://" + server + "/operate?op=temp_val&value=" + $("#target_temp").val(),
         dataType: "text",
         success:function(data){
-            get_settings()
+            option.series[0].markLine["data"][0]={yAxis:$("#target_temp").val()}
+            myChart.setOption(option)
         }
     })
 }
 function on_humi_setup(){
     $.ajax({
         type: "GET",
-        url:"http://" + server + "/change_settings?target_humi="+$("#target_humi").val(),
+        url:"http://" + server + "/operate?op=humi_val&value=" + $("#target_humi").val(),
         dataType: "text",
         success:function(data){
-            get_settings()
+            option.series[1].markLine["data"][0]={yAxis:$("#target_humi").val()}
+            myChart.setOption(option)
+        }
+    })
+}
+function on_switch_light(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/operate?op=switch_light",
+        dataType: "text",
+        success:function(data){
+
+        }
+    })
+}
+function on_switch_mode(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/operate?op=switch_mode&value=" + $("#op_mode").val(),
+        dataType: "text",
+        success:function(data){
+            if($("#op_mode").val()=='COOLER'){
+                $("#target_humi").hide();
+                $("#btn_humi").hide();
+            }else{
+                $("#target_humi").show();
+                $("#btn_humi").show();
+            }
+        }
+    })
+}
+function on_startup(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/operate?op=startup",
+        dataType: "text",
+        success:function(data){
+            $("#op_mode").css('visibility', 'hidden');
+            $("#light").css('visibility', 'visible');
+            $("#curr_status").css('visibility', 'visible');
+            $("#startup").css('visibility', 'hidden');
+            $("#shutdown").css('visibility', 'visible');
+            $("#curr_temp").html('');
+            $("#curr_humi").html('');
+            $("#container").show();
+            get_status();
+        }
+    })
+}
+function on_shutdown(){
+    $.ajax({
+        type: "GET",
+        url:"http://" + server + "/operate?op=shutdown",
+        dataType: "text",
+        success:function(data){
+            $("#op_mode").css('visibility', 'visible');
+            $("#light").css('visibility', 'hidden');
+            $("#curr_status").css('visibility', 'hidden');
+            $("#startup").css('visibility', 'visible');
+            $("#shutdown").css('visibility', 'hidden');
+            $("#curr_temp").html('');
+            $("#curr_humi").html('');
+            $("#container").hide()
         }
     })
 }
@@ -274,39 +338,73 @@ function from_sec_to_str(s){
 function get_status(){
     $.ajax({
         type: "GET",
-        url:"http://" + server + "/get_status",
+        url:"http://" + server + "/status",
         dataType: "json",
+        timeout: 5000,
         success: function (result) {
-            $("#curr_temp").html('上:'+result.t1 + '/下:'+result.t2);
-            $("#curr_humi").html('上:'+result.h1 + '/下:'+result.h2);
-            document.title='发酵箱('+result.t1 + '/' + result.t2 + ',' + result.h1 + '/' + result.h2 + ')';
-            $("#curr_status").text("工作中：" + from_sec_to_str(result.bt));
-            $("#is_heating").text(result.Heater)
-            $("#is_humi").text(result.Humi)
-            $("#is_fan").text(result.Fan)
-            $("#is_frig").text(result.Frig)
+            if(result.r==0){
+                var mode=result.mode;
+                $("#curr_temp").val(mode).change();
+                $("#op_mode").css('visibility', 'visible');
+                $("#light").css('visibility', 'hidden');
+                $("#curr_status").css('visibility', 'hidden');
+                $("#startup").css('visibility', 'visible');
+                $("#shutdown").css('visibility', 'hidden');
+                $("#curr_temp").html('');
+                $("#curr_humi").html('');
+                $("#container").hide()
+            }else{
+                $("#op_mode").css('visibility', 'hidden');
+                $("#light").css('visibility', 'visible');
+                $("#curr_status").css('visibility', 'visible');
+                $("#startup").css('visibility', 'hidden');
+                $("#shutdown").css('visibility', 'visible');
+                $("#container").show()
 
-            var curr_time = result.t
-            if(low_temp_his.length==0 || curr_time!=low_temp_his[low_temp_his.length-1].name){
-                low_temp_his.push({name:curr_time,value:[curr_time,result.t1]})
-                low_humi_his.push({name:curr_time,value:[curr_time,result.h1]})
-                high_temp_his.push({name:curr_time,value:[curr_time,result.t1]})
-                high_humi_his.push({name:curr_time,value:[curr_time,result.h1]})
-                myChart.setOption({
-                    series: [
-                    {data: low_temp_his},
-                    {data: low_humi_his},
-                    {data: high_temp_his},
-                    {data: high_humi_his}
-                    ]
-                });
+                $("#curr_temp").html('上:'+result.t1 + '下:'+result.t2);
+                $("#curr_humi").html('上:'+result.h1 + '下:'+result.h2);
+                if(result.mode=='COOLER'){
+                    $("#curr_status").text("冷藏工作中：" + from_sec_to_str(result.bt));
+                    document.title='冷藏('+result.t1 + '/' + result.t2 + ',' + result.h1 + '/' + result.h2 + ')';
+                }else{
+                    $("#curr_status").text("发酵工作中：" + from_sec_to_str(result.bt));
+                    document.title='发酵('+result.t1 + '/' + result.t2 + ',' + result.h1 + '/' + result.h2 + ')';
+                }
+                $("#is_heating").text(result.Heater[0])
+                $("#is_humi").text(result.Humi[0])
+                $("#is_fan").text(result.Fan[0])
+                $("#is_frig").text(result.Frig[0])
+
+                var curr_time = result.t
+                if(low_temp_his.length==0 || curr_time!=low_temp_his[low_temp_his.length-1].name){
+                    low_temp_his.push({name:curr_time,value:[curr_time,result.t1]})
+                    low_humi_his.push({name:curr_time,value:[curr_time,result.h1]})
+                    high_temp_his.push({name:curr_time,value:[curr_time,result.t1]})
+                    high_humi_his.push({name:curr_time,value:[curr_time,result.h1]})
+                    myChart.setOption({
+                        series: [
+                        {data: low_temp_his},
+                        {data: low_humi_his},
+                        {data: high_temp_his},
+                        {data: high_humi_his}
+                        ]
+                    });
+                }
+
+                $("#target_temp").val(result.tt);
+                option.series[0].markLine["data"][0]={yAxis:result.tt}
+                if(result.mode=='COOLER'){
+                    $("#target_humi").hide();
+                    $("#btn_humi").hide();
+                    option.series[1].markLine["data"][0]={yAxis:0}
+                }else{
+                    $("#target_humi").show();
+                    $("#btn_humi").show();
+                    option.series[1].markLine["data"][0]={yAxis:result.th}
+                }
+
+                myChart.setOption(option)
             }
-
-            $("#target_temp").val(result.tt);
-            $("#target_humi").val(result.th);
-            option.series[0].markLine["data"][0]={result.tt}
-            option.series[1].markLine["data"][0]={result.th}
-            myChart.setOption(option)
 
 
         }
@@ -318,7 +416,7 @@ window.onload=function(){
     init_page()
     setInterval(function () {
         get_status()
-        }, 10000
+        }, 33000
     );
 }
 
