@@ -205,15 +205,13 @@ class Controller():
         cts='{:02d}:{:02d}:{:02d}'.format(ct[3],ct[4],ct[5])
 
         print('Curr:{}  From boot:{}'.format(cts ,_sec_to_str(msg.get('bt'))))
-        l=''
-        for sensor in self.sensors:
-           l=l+'  '+sensor[0] + ': ({},{})'.format(msg.get('t_' +sensor[0]),msg.get('h_' + sensor[0]))
+        for sensor in msg['measure']:
+           print(sensor[0] + ': ({},{})'.format(sensor[1],sensor[2]))
 
         s=''
         for m in msg['status']:
             s=s+'  ' + m[0] + ':{}'.format(m[1])
 
-        print(l )
         print(s )
         # self.peak_output.run(msg,print)
         print(gc.mem_free())
