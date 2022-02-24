@@ -161,8 +161,9 @@ class FanControl(Controler):
             return self.fan.min_duty
         #温差与转速线性
         r =  int(ts/(self.tolerance[2])*(self.fan.max_duty-self.fan.min_duty)) + self.fan.min_duty
+        return r
         #获取阶梯转速
-        return self.fan.get_rate(r)
+        # return self.fan.get_rate(r)
 
     def duty(self,d):
         if(d<self.fan.min_duty):
