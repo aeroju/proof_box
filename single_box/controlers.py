@@ -154,7 +154,7 @@ class FanControl(Controler):
 
         d=self._duty_rate(tm)
         # d=1023
-        self._speed=d
+        self._speed=d if d >self.fan.min_duty and d<self.fan.max_duty else self.fan.min_duty
         if(d is not None):
             self.pwm.duty(d)
 
