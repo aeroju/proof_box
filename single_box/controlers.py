@@ -142,8 +142,8 @@ class FanControl(Controler):
         ts=self._get_temp(msg)
         if(len(ts)==0):
             return
-        # d=self._duty_rate(t1,t2)
-        d=1023
+        d=self._duty_rate(ts)
+        # d=1023
         self._speed=d
         if(d is not None):
             self.pwm.duty(d)
