@@ -76,10 +76,14 @@ class Controler():
     def start(self):
         if(self.pin is not None):
             self.pin.on()
+        if(self.pwm is not None):
+            self.pwm.duty(1023)
 
     def stop(self):
         if(self.pin is not None):
             self.pin.off()
+        if(self.pwm is not None):
+            self.pwm.duty(0)
 
     def _get_temp(self,msg):
         t=[]
@@ -140,27 +144,31 @@ class FanControl(Controler):
         return self._speed
 
     def run(self,msg,target):
-        ts=self._get_temp(msg)
-        if(len(ts)==0):
-            return
-        d=self._duty_rate(ts)
+        inner_temp_gap=self._get_gap(self._get_temp(msg))
+        inner_humi_gap=self._get_gap(self._get_humi(msg))
+        ave_tmp_gap=self._get_ave_tmp(msg)-target[1]
+        ave_humi_gap=self._get_ave_humi(msg)-target[2]
+        tm=max([inner_temp_gap,inner_humi_gap,ave_tmp_gap,ave_humi_gap])
+
+        d=self._duty_rate(tm)
         # d=1023
         self._speed=d
         if(d is not None):
             self.pwm.duty(d)
 
-    def _duty_rate(self,ts):
+    def _duty_rate(self,tm):
         if(self.tolerance[1]==-1 and self.tolerance[2]==-1):
             return self.fan.max_duty
-        ts=self._get_gap(ts)
+        if(self.tolerance[1]==-2 and self.tolerance[2]==-2):
+            return self.fan.min_duty
         #上下温差大于2度，风扇全速
-        if(ts>self.tolerance[1]):
+        if(tm>self.tolerance[1]):
             return self.fan.max_duty
         #上下温差小于0.5
-        if(ts<self.tolerance[2]):
+        if(tm<self.tolerance[2]):
             return self.fan.min_duty
         #温差与转速线性
-        r =  int(ts/(self.tolerance[2])*(self.fan.max_duty-self.fan.min_duty)) + self.fan.min_duty
+        r =  int(tm/(self.tolerance[2])*(self.fan.max_duty-self.fan.min_duty)) + self.fan.min_duty
         return r
         #获取阶梯转速
         # return self.fan.get_rate(r)
