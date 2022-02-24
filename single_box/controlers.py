@@ -24,6 +24,7 @@ class PwmSetting():
             if(i<=len(self.duty_rates)-1):
                 if(self.duty_rates[i]<r and r<self.duty_rates[i+1]):
                     return self.duty_rates[i+1]
+        return self.min_duty
 
 class Controler():
     def __init__(self,ctl,tolerance):
