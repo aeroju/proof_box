@@ -144,10 +144,12 @@ class FanControl(Controler):
         return self._speed
 
     def run(self,msg,target):
+        if(len(self._get_temp(msg))==0 or self._get_humi(msg)==0):
+            return
         inner_temp_gap=self._get_gap(self._get_temp(msg))
         inner_humi_gap=self._get_gap(self._get_humi(msg))
-        ave_tmp_gap=self._get_ave_tmp(msg)-target[1]
-        ave_humi_gap=self._get_ave_humi(msg)-target[2]
+        ave_tmp_gap=self._get_ave_tmp(msg)-target[0]
+        ave_humi_gap=self._get_ave_humi(msg)-target[1]
         tm=max([inner_temp_gap,inner_humi_gap,ave_tmp_gap,ave_humi_gap])
 
         d=self._duty_rate(tm)
