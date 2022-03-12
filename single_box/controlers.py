@@ -145,18 +145,19 @@ class FanControl(Controler):
 
     def run(self,msg,target):
         if(len(self._get_temp(msg))==0 or self._get_humi(msg)==0):
+            self.stop()
+            self._speed=0
             return
         inner_temp_gap=self._get_gap(self._get_temp(msg))
-        inner_humi_gap=self._get_gap(self._get_humi(msg))
-        ave_tmp_gap=self._get_ave_tmp(msg)-target[0]
-        ave_humi_gap=self._get_ave_humi(msg)-target[1]
-        tm=max([inner_temp_gap,inner_humi_gap,ave_tmp_gap,ave_humi_gap])
+        d=self._duty_rate(inner_temp_gap)
 
-        d=self._duty_rate(tm)
-        # d=1023
-        self._speed=d if d >self.fan.min_duty and d<self.fan.max_duty else self.fan.min_duty
-        if(d is not None):
-            self.pwm.duty(d)
+        ave_temp_gap=self._get_ave_tmp(msg)-target[0]
+        ave_humi_gap=self._get_ave_humi(msg)-target[1]
+        if(ave_humi_gap>0 and ave_temp_gap>0):
+            d=self._duty_rate(max([ave_temp_gap,ave_humi_gap]))
+
+        self._speed=d if d >=self.fan.min_duty and d<=self.fan.max_duty else self.fan.min_duty
+        self.pwm.duty(self._speed)
 
     def _duty_rate(self,tm):
         if(self.tolerance[1]==-1 and self.tolerance[2]==-1):
@@ -215,7 +216,8 @@ class FrigControl(Controler):
     def stop(self):
         ut=utime.time()
         #如果距离上次启动时间小于5分钟，则继续运行
-        print('running time of frig:{} secs'.format(ut-self.last_start))
+        if(self.last_start>0):
+            print('running time of frig:{} secs'.format(ut-self.last_start))
         if(ut-self.last_start<5*60):
             to_st=5*60+10-(ut-self.last_start)
             print('{} secs after last start, stop timer setup for {} secs'.format(ut-self.last_start,to_st))
@@ -278,11 +280,11 @@ class HeaterControl(Controler):
             self.pwm.duty(0)
 
     def linner(self,t,target):
-        r=int((target-t)/(self.tolerance[1])*1023)
         if(self.pin is not None):
-            self.pin.on()
-        self._power=int(r/1023*100)
+            self.start()
         if(self.pwm is not None):
+            r=int((target-t)/(self.tolerance[1])*1023)
+            self._power=int(r/1023*100)
             self.pwm.duty(r)
 
     def _run(self,ave_tmp,target):

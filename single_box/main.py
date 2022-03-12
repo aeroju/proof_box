@@ -10,6 +10,7 @@ from keypad import Keypad
 from controlers import *
 from outputs import *
 from proof_config import ProofConfig,SetupConfig
+from ota import OTA
 import gc,uos
 import _thread
 
@@ -99,7 +100,6 @@ class Controller():
         for h in self.box_config.humis:
             self.humi_control.append(HumiControl(h,tolerance=self.setup_config.tolerance.get(h[0])))
 
-
         self.controls.extend(self.fan_control)
         self.controls.extend(self.heater_control)
         self.controls.extend(self.frig_control)
@@ -132,7 +132,7 @@ class Controller():
         self.keypad.start_task(self.loop,self.stop_sign)
         #start web listener task
         self.web_output.start(self.loop)
-        self.web_output.run({'r':not self.stop_sign.is_set(),'mode':self.mode})
+        # self.web_output.run({'r':not self.stop_sign.is_set(),'mode':self.mode,'tt':self.setup_config.target_temp,'th':self.setup_config.target_humi})
         #start power save task
         self.loop.create_task(self.power_save_task())
 
@@ -222,8 +222,10 @@ class Controller():
             c.run(msg,[self.setup_config.target_temp,self.setup_config.target_humi,self.mode])
 
     def switch_light(self):
+        print('begin switch light')
         for l in self.light_control:
             l.switch()
+        print('after switch light')
 
     def set_mode(self,mode = None):
         if(mode is not None):
@@ -240,16 +242,13 @@ class Controller():
             self.setup_config.target_humi=50
         self.display.brightness(2)
         self.display.write_flash_txt('  {}'.format(self.mode))
-        self.web_output.set_mode(self.mode)
+        self.web_output.set_config(self.setup_config)
         self.setup_config.save()
 
     def switch_mode(self):
-        if(self.mode=='COOLER'):
-            self.set_mode('HEATER')
-        elif(self.mode=='HEATER'):
-            self.set_mode('FAN')
-        else:
-            self.set_mode('COOLER')
+        i = [ k[0] for k in self.box_config.functions].index(self.mode)
+        i= 0 if i+1>=len(self.box_config.functions) else i+1
+        self.set_mode(self.box_config.functions[i][0])
 
     def power_on(self):
         for p in self.pwr_control:
@@ -310,6 +309,7 @@ class Controller():
 
     def on_key_press(self,pressed_keys):
         #if keypressed, then reset power save timer
+        print('on input message:',pressed_keys)
         self.power_save_check_time=utime.time()
         if(len(pressed_keys)==2):
             if('temp_up' in pressed_keys and 'temp_down' in pressed_keys):

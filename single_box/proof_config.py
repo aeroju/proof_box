@@ -2,6 +2,10 @@ import uos
 
 class ProofConfig():
     def __init__(self,conf_file):
+        #functions
+        self.functions=[]
+
+        #sensors
         self.sensors=[]
 
         #controls
@@ -12,6 +16,7 @@ class ProofConfig():
         self.frigs=[]
         self.lights=[]
 
+        #IO
         self.input_keys={}
         self.displays={}
         self.read(conf_file)
@@ -35,7 +40,9 @@ class ProofConfig():
                 category=line[1:-1]
                 continue
             if(line.find('=')>0):
-                if(category=='sensors'):
+                if(category=='functions'):
+                    self.read_function(line)
+                elif(category=='sensors'):
                     self.read_sensor(line)
                 elif(category=='heater'):
                     self.read_heater(line)
@@ -55,6 +62,11 @@ class ProofConfig():
                     self.read_display(line)
                 else:
                     print('unknown category:',line)
+
+    def read_function(self,line):
+        k,v=line.split('=')
+        if(k.lower() in ('heater','cooler','exhaust')):
+            self.functions.append([k.upper(),v.upper()])
 
     def read_sensor(self,line):
         k,v=line.split("=")
@@ -123,6 +135,11 @@ class SetupConfig():
         self.read()
 
     def read(self):
+        def _str_to_int(s):
+            try:
+                return int(s)
+            except:
+                return 0
         with open(self.setup_file,'r') as f:
             lines=f.readlines()
         for line in lines:
@@ -134,9 +151,9 @@ class SetupConfig():
                 if(k=='mode'):
                     self.mode=v
                 elif(k=='target_temp'):
-                    self.target_temp=int(v)
+                    self.target_temp=_str_to_int(v)
                 elif(k=='target_humi'):
-                    self.target_humi=int(v)
+                    self.target_humi=_str_to_int(v)
                 else:
                     self.tolerance[k]=eval(v)
         pass

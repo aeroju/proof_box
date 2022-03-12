@@ -72,7 +72,6 @@ class WebOutput():
             ]
         self.app=picoweb.WebApp('Frig Web Server',routes)
         self.status={}
-        self.mode='COOLER'
         self._callbacks=[]
         self.cache_file_name='his.txt'
         self.file_lock=uasyncio.Lock()
@@ -111,9 +110,6 @@ class WebOutput():
                 fh.write('^'.join(line)+'\r\n' )
         line.clear()
 
-    def set_mode(self,mode):
-        self.mode=mode
-
     def set_config(self,config:SetupConfig):
         self.config=config
 
@@ -122,7 +118,7 @@ class WebOutput():
         pass
 
     def _get_box_config(self,req,resp):
-        msg={'sersors':[],'heaters':[],'fans':[],'frigs':[],'humis':[]}
+        msg={'functions':self.box_config.functions,'sersors':[],'heaters':[],'fans':[],'frigs':[],'humis':[]}
         for s in self.box_config.sensors:
             msg['sersors'].append(s[0])
         for c in self.box_config.heaters:
@@ -144,8 +140,8 @@ class WebOutput():
             yield from resp.awrite("")
 
     def _get_status(self,req,resp):
-        if(self.status is None or len(self.status)==0):
-            yield from picoweb.jsonify(resp,{'mode':self.mode,'r':False})
+        if(self.status is None or len(self.status)==0 or self.status.get('r')==False):
+            yield from picoweb.jsonify(resp,{'mode':self.config.mode,'r':False,'tt':self.config.target_temp,'th':self.config.target_humi})
         else:
             if(self.status.get('t') is not None):
                 tt=utime.localtime(self.status.get('t'))
@@ -173,7 +169,7 @@ class WebOutput():
             yield from req.read_form_data()
         else:
             req.parse_qs()
-        for k in self.config.tolerance.keys():
+        for k in req.form.keys():
             self.config.tolerance[k]=req.form[k]
         print('data get from client:',self.config.tolerance)
         msg=['change_config',self.config]

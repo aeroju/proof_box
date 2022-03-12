@@ -14,8 +14,14 @@ def cat(fn):
     with open(fn,'r') as fh:
         print(''.join(fh.readlines()))
 
-import main
-main.Controller()
+from ota import OTA
+
+if(not OTA().check_version()):
+    import machine
+    machine.reset()
+else:
+    import main
+    main.Controller()
 
 # import keypad
 # keypad.test()

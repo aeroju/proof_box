@@ -48,7 +48,9 @@ def start_response(writer, content_type="text/html; charset=utf-8", status="200"
     if not headers:
         headers={
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "x-requested-with,content-type",
+            "Access-Control-Allow-Credentials":"true"
             # "Access-Control-Allow-Headers": "Access-Control-Allow-Origin,*",
             # 'Access-Control-Max-Age': 86400,
             # "X-Powered-By":' 3.2.1'
@@ -136,10 +138,6 @@ class WebApp:
             # TODO: bytes vs str
             request_line = request_line.decode()
             method, path, proto = request_line.split()
-            if('OPTIONS'==method.upper()):
-                print('response to option')
-                yield from self.option_response(req,writer)
-                return
             if self.debug >= 0:
                 self.log.info('%.3f %s %s "%s %s"' % (utime.time(), req, writer, method, path))
             path = path.split("?", 1)
