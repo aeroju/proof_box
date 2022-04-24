@@ -1,0 +1,38 @@
+{
+	"pages": [{
+			"path": "pages/index/index"
+		},{
+            "path" : "pages/config/config"
+        }
+    ],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "Proof Box",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8",
+		"app-plus": {
+			"background": "#efeff4"
+		}
+	},
+	"tabBar":{
+		"color":"#166b74",
+		"selectedColor":"#56abe4",
+		"backgroundColor":"#a3a3a3",
+		"borderStyle":"black",
+		"position":"bottom",
+		"list":[
+			{
+				"pagePath":"pages/index/index",
+				"text":"首页",
+				"iconPath":"static/main.png",
+				"selectedIconPath":"static/main.png"
+			},
+			{
+				"pagePath":"pages/config/config",
+				"text":"设置",
+				"iconPath":"static/setup.png",
+				"selectedIconPath":"static/setup.png"
+			}
+		]
+	}
+}
