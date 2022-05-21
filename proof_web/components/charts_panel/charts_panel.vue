@@ -120,6 +120,9 @@
 			shrinkData(max_rows){
 				const total_rows=this.time_series.length
 				const shrink_rate=parseInt(total_rows/max_rows)
+				function shortFloat(f){
+					return parseInt(f*100)/100
+				}
 				console.log('begin to shrink..., rate:',shrink_rate)
 				if(! shrink_rate || shrink_rate<=1){
 					return {categories:this.time_series,series:this.sensors_data}
@@ -136,11 +139,13 @@
 						if(k>=total_rows){
 							k=total_rows-1
 						}
-						shrink_time_series.push(Math.max(...this.time_series.slice(i,k)))
+						// console.log(this.time_series.slice(i,k))
+						// let sss=this.time_series.slice(i,k)
+						shrink_time_series.push(this.time_series[k])
 						for(let j=0;j<shrink_series.length;j++){
 							let data_to_shrink=this.sensors_data[j].data.slice(i,k)
-							let _max=Math.max(...data_to_shrink)
-							let _min=Math.min(...data_to_shrink)
+							let _max=shortFloat(Math.max(...data_to_shrink))
+							let _min=shortFloat(Math.min(...data_to_shrink))
 							
 							//尖峰
 							if(data_to_shrink[0]<_max && data_to_shrink[data_to_shrink.length-1]<_max){
@@ -148,13 +153,14 @@
 							}else if(data_to_shrink[0]>_min && data_to_shrink[data_to_shrink.length-1]>_min){
 								shrink_series[j].data.push(_min)
 							}else{
-								let _sum=data_to_shrink.reduce((previous, current) => current += previous)
-								let _ave=_sum/data_to_shrink.length
+								let _sum=data_to_shrink.reduce((previous, current) => current += previous,0)
+								let _ave=shortFloat(_sum/data_to_shrink.length)
 								shrink_series[j].data.push(_ave)
 							}
 							
 						}
 					}
+					// console.log('time series:',shrink_time_series)
 					return {categories:shrink_time_series,series:shrink_series}
 				}
 			}
