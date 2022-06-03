@@ -55,7 +55,7 @@ class SM78():
                             break
                 if(not find_res):
                     response=bytearray()
-            utime.sleep(0.05)
+            utime.sleep_ms(50)
         return bytearray()
 
     def _run(self):

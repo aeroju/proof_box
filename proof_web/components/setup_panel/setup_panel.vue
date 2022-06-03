@@ -3,7 +3,7 @@
 		<view class="setup_view">
 			<text class="label_text">温度：</text>
 			<text class="value_text">{{ts}}</text>
-			<uni-number-box :min="is_cooling ? -18:25" :max="is_cooling ? 10:40" :step="1" v-model="target_temp" ></uni-number-box>
+			<uni-number-box :min="is_cooling ? -18:10" :max="is_cooling ? 30:40" :step="1" v-model="target_temp" ></uni-number-box>
 			<button class="action_button" @click="onTempSetup(target_temp)">设置</button>
 		</view>
 		<view class="setup_view">
