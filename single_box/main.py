@@ -270,6 +270,7 @@ class Controller():
         except Exception:
             print('eeee')
             pass
+        utime.sleep_ms(400)
         self.power_on()
         self.start_time=utime.time()
         self.loop.create_task(self._run(self.stop_sign))
@@ -294,10 +295,10 @@ class Controller():
         self.display.write_txt('     OFF')
 
     def check_temp_and_humi_setup(self):
-        if(self.mode=='COOLER' and self.setup_config.target_temp>10):
+        if(self.mode=='COOLER' and self.setup_config.target_temp>30):
+            self.setup_config.target_temp=30
+        if(self.mode=='HEATER' and self.setup_config.target_temp<10):
             self.setup_config.target_temp=10
-        if(self.mode=='HEATER' and self.setup_config.target_temp<20):
-            self.setup_config.target_temp=20
         if(self.mode=='COOLER' and self.setup_config.target_humi is not None):
             self.setup_config.target_humi = None
         if(self.mode=='HEATER' and self.setup_config.target_humi>100):

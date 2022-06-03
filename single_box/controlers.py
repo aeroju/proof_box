@@ -152,7 +152,7 @@ class FanControl(Controler):
         d=self._duty_rate(inner_temp_gap)
 
         ave_temp_gap=self._get_ave_tmp(msg)-target[0]
-        ave_humi_gap=self._get_ave_humi(msg)-target[1]
+        ave_humi_gap=(self._get_ave_humi(msg)-target[1]) if target[1] is not None else 0
         if(ave_humi_gap>0 and ave_temp_gap>0):
             d=self._duty_rate(max([ave_temp_gap,ave_humi_gap]))
 
@@ -190,6 +190,8 @@ class FrigControl(Controler):
         super().__init__(pin,tolerance)
         self.last_start=0
         self.last_stop=0
+        self.last_op = 0
+        self.pin.off()
         self.stop_timer=stop_timer
 
     @property
@@ -199,14 +201,16 @@ class FrigControl(Controler):
     def start(self):
         ut=utime.time()
         #如果距离上次停止时间小于5分钟，则继续停止
-        if(ut-self.last_stop<5*60):
-            print('{} seconds after last stop, wait'.format(ut-self.last_stop))
+        if(ut-self.last_op<10*60):
+            print('{} seconds after last operation, wait'.format(ut-self.last_op))
             return
         if(self.pin.value()==0):
-            print('frig start running')
-            self.last_start=ut
+            print('frig start')
+            self.last_op=ut
             self.pin.on()
-            self.stop_timer.deinit()
+        else:
+            print('frig is running for {} s'.format(ut-self.last_op))
+            # self.stop_timer.deinit()
         return
 
     def _timer_callback(self,t):
@@ -216,31 +220,38 @@ class FrigControl(Controler):
     def stop(self):
         ut=utime.time()
         #如果距离上次启动时间小于5分钟，则继续运行
-        if(self.last_start>0):
-            print('running time of frig:{} secs'.format(ut-self.last_start))
-        if(ut-self.last_start<5*60):
-            to_st=5*60+10-(ut-self.last_start)
-            print('{} secs after last start, stop timer setup for {} secs'.format(ut-self.last_start,to_st))
-            self.stop_timer.deinit()
-            self.stop_timer.init(mode=Timer.ONE_SHOT, period=to_st*1000, callback=self._timer_callback)
+        if(ut-self.last_op<5*60):
+            print('{} seconds after last operation, wait'.format(ut-self.last_op))
             return
+        # if(self.last_start>0):
+        #     print('running time of frig:{} secs'.format(ut-self.last_start))
+        # if(ut-self.last_start<5*60):
+        #     to_st=5*60+10-(ut-self.last_start)
+        #     print('{} secs after last start, stop timer setup for {} secs'.format(ut-self.last_start,to_st))
+        #     self.stop_timer.deinit()
+        #     self.stop_timer.init(mode=Timer.ONE_SHOT, period=to_st*1000, callback=self._timer_callback)
+        #     return
         if(self.pin.value()==1):
-            self.last_stop=ut
+            print('frig stop')
+            self.last_op=ut
             self.pin.off()
+        else:
+            print('frig stopped for {} s'.format(ut-self.last_op))
+        return
 
     def run(self,msg,target):
         if(target[2] !='COOLER'):
             return
-        if(target[0]>10):
-            self.stop()
-            return
+        # if(target[0]>10):
+        #     self.stop()
+        #     return
         ave_tmp=self._get_ave_tmp(msg)
         if(ave_tmp is None):
             self.stop()
             return
-        if(ave_tmp < target[0]-self.tolerance):
+        if(ave_tmp < target[0]-self.tolerance[1]):
             self.stop()
-        if(ave_tmp > target[0]+self.tolerance):
+        if(ave_tmp > target[0]+self.tolerance[1]):
             self.start()
 
     def test(self):
